@@ -2589,7 +2589,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=136,APP_UPDATE_DATE="28 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=137,APP_UPDATE_DATE="28 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -3902,7 +3902,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     }catch{}
     const REFERENCE=5*1024*1024,percent=Math.min(100,Math.round(totalBytes/REFERENCE*100)),barColor=percent>90?"#dc2626":percent>70?"#d97706":"#0f8c72";
     const cloudActive=typeof window.cloudSignOut==="function";
-    const cloudNote=cloudActive?`<div class="storage-meter-row"><small>☁ بياناتك متزامنة مع السحابة (خطة مجانية بسعة ~1 جيجابايت) — حتى لو امتلأت هذه الخانة، تبقى بياناتك وصورك محفوظة بأمان ويمكن الوصول لها من جهازك الآخر</small></div>`:`<div class="storage-meter-row"><small>هذه الخانة تقيس تخزين هذا المتصفح فقط. فعّل المزامنة السحابية لرفع السعة الفعلية إلى ~1 جيجابايت وربط جوالك بجهازك</small></div>`;
+    const cloudNote=cloudActive?`<div class="storage-meter-row"><small>☁ بياناتك متزامنة مع السحابة (خطة مجانية بسعة ~1 جيجابايت) — حتى لو امتلأت هذه الخانة، تبقى بياناتك وصورك محفوظة بأمان ويمكن الوصول لها من جهازك الآخر</small></div><div class="storage-meter-row"><button class="btn" type="button" onclick="openPublicShowcaseShare()">🔗 رابط/QR معاينة عامة لأعمالي (للزيارات الخارجية)</button></div>`:`<div class="storage-meter-row"><small>هذه الخانة تقيس تخزين هذا المتصفح فقط. فعّل المزامنة السحابية لرفع السعة الفعلية إلى ~1 جيجابايت وربط جوالك بجهازك</small></div>`;
     el.innerHTML=`<div class="storage-meter-row"><b>مساحة تخزين هذا المتصفح (نسخة محلية سريعة)</b><span>${formatBytes(totalBytes)} من أصل ~5 ميجابايت تقريبًا (بعض المتصفحات مثل Chrome تسمح حتى 10 ميجا)</span></div><div class="storage-meter-bar"><div class="storage-meter-fill" style="width:${percent}%;background:${barColor}"></div></div><div class="storage-meter-row"><small>تقارير البرامج المحفوظة: ${formatBytes(reportsBytes)}</small><small>باقي بيانات التطبيق: ${formatBytes(totalBytes-reportsBytes)}</small></div>${cloudNote}`;
   }
   function renderProgramReportArchive(){
@@ -4099,6 +4099,32 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
       const svg=qr.createSvgTag({cellSize:4,margin:2,scalable:true});
       return svg.replace("<svg ",`<svg class="${className||""}" `);
     }catch(e){console.warn("تعذر توليد رمز QR محليًا",e);return ""}
+  }
+  /* Update 137: زر "رابط/QR معاينة عامة" — يفتح نافذة فيها رابط + QR لصفحة showcase.html
+     العامة (بدون تسجيل دخول)، ويطلب نشر آخر لقطة من الإحصائيات فورًا حتى لا ينتظر الزائر
+     مهلة الـ debounce العادية (2.5 ثانية) لو كان أول استخدام. */
+  function openPublicShowcaseShare(){
+    const uid=typeof window.__cloudUid==="function"?window.__cloudUid():null;
+    if(!uid){toast?.("فعّل تسجيل الدخول/المزامنة السحابية أولًا من الإعدادات قبل إنشاء رابط المعاينة العامة");return}
+    window.__publishShowcaseNow?.();
+    const base=location.href.replace(/[^/]*$/,"");
+    const url=`${base}showcase.html?u=${encodeURIComponent(uid)}`;
+    document.getElementById("publicShowcaseModal")?.remove();
+    const modal=document.createElement("div");
+    modal.id="publicShowcaseModal";
+    modal.style.cssText="position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px";
+    modal.innerHTML=`<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:22px;text-align:center;direction:rtl;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <h3 style="margin:0 0 8px;font-size:18px">رابط المعاينة العامة</h3>
+      <p style="margin:0 0 14px;font-size:12.5px;color:#555;line-height:1.7">امسح الكود أو شارك الرابط مع أي زائر ليتصفح ملف الإنجاز والملف الشامل مباشرة من جواله — يتحدّث تلقائيًا مع كل عمل جديد تضيفه. لحماية خصوصية الطلاب، الصفحة تعرض فقط إحصائيات وملخصات مهنية، ولا تعرض أي اسم طالب أو تفاصيل شخصية.</p>
+      <div style="display:flex;justify-content:center;margin-bottom:14px">${localQrSvgHTML(url,"public-showcase-qr")}</div>
+      <input readonly value="${url}" onclick="this.select()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:12px;margin-bottom:10px;direction:ltr;text-align:center">
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="navigator.clipboard.writeText(${JSON.stringify(url)}).then(()=>toast?.('تم نسخ الرابط')).catch(()=>{})" style="flex:1;padding:9px;border:none;border-radius:8px;background:#0f8c72;color:#fff;font-weight:bold;cursor:pointer">نسخ الرابط</button>
+        <button type="button" onclick="document.getElementById('publicShowcaseModal').remove()" style="flex:1;padding:9px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer">إغلاق</button>
+      </div>
+    </div>`;
+    modal.addEventListener("click",e=>{if(e.target===modal)modal.remove()});
+    document.body.appendChild(modal);
   }
   function safePrintFileTitle(value){return toLatinDigits(value||"تقرير").replace(/[\\/:*?"<>|]/g,"-").replace(/\s+/g," ").trim()||"تقرير"}
   const PDF_PAGE_SELECTOR=".official-file-cover,.official-inner-page,.professional-report,.archive-print-report,.student-record-document,.student-dossier-page,.my-record-document,.absence-register-page,.survey-report-paper,.committee-export-page,.achievement-summary-page,.achievement-category-page,.achievement-detail-page,.evaluation-portfolio-page,.performance-portfolio-page,.performance-evidence-group-cover,.archive-print-page,.toolkit-entry-page,.universal-generic-page";
@@ -6540,7 +6566,56 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       return keys;
     }
 
-    let uid=null,pushTimers={},lastAppliedValue={},nativeSetItem=localStorage.setItem.bind(localStorage),stopKvListener=null,stopReportsListener=null,pendingReportWrites={};
+    let uid=null,pushTimers={},lastAppliedValue={},nativeSetItem=localStorage.setItem.bind(localStorage),stopKvListener=null,stopReportsListener=null,pendingReportWrites={},showcasePushTimer=null;
+
+    /* Update 137: "صفحة المعاينة العامة" — رابط/QR يفتح صفحة عامة (بدون تسجيل دخول) تعرض
+       إحصائيات ملخّصة عن عمل الموجّه (عدد التقارير/البرامج/المستفيدين) بالإضافة إلى ملخصات
+       "ملف الإنجاز" و"الملف الشامل/التقويم الخارجي" — للزيارات الخارجية. عمدًا لا تُنشر أي
+       تفاصيل على مستوى الطالب الفردي (لا اسم، لا سبب استدعاء، لا نص سجل) — فقط أرقام وملخصات
+       مهنية مجمّعة، لأن هذا المستند سيُقرأ بقاعدة Firestore عامة (allow read: if true). */
+    function computeShowcaseSnapshot(){
+      const p=appProfile||emptyProfile;
+      const reports=typeof savedProgramReports==="function"?savedProgramReports():[];
+      const totalReports=reports.length;
+      const totalBeneficiaries=reports.reduce((sum,r)=>sum+(Number(r.beneficiaries)||0),0);
+      const totalPrograms=typeof editablePrograms!=="undefined"?editablePrograms.length:0;
+      const totalTasksDone=typeof tasks!=="undefined"?tasks.filter(t=>t.done).length:0;
+      const totalMeetings=typeof committees!=="undefined"?committees.reduce((sum,c)=>sum+((c.meetings||[]).length),0):0;
+      const totalSurveys=typeof surveyRuns!=="undefined"?surveyRuns.length:0;
+      const achievementPeriods=(typeof monthlyReports!=="undefined"?monthlyReports:[]).slice(0,36).map(r=>({
+        id:r.id,label:r.label,year:r.year,month:r.month,generatedAt:r.generatedAt,
+        programCount:r.programCount||0,studentCount:r.studentCount||0,
+        completedTaskCount:r.completedTaskCount||0,programReportCount:r.programReportCount||0,
+        taskRate:r.taskRate??100
+      }));
+      let externalEvaluation=null;
+      try{
+        const data=typeof externalEvaluationProgressData==="function"?externalEvaluationProgressData():null;
+        if(data)externalEvaluation={
+          readiness:data.readiness,evidenceCount:data.evidenceCount,strong:data.strong,gapsCount:data.gaps.length,
+          indicators:data.items.map(i=>({code:i.code,title:i.title,domain:i.domain,scope:i.scope,score:i.score,levelLabel:i.level.label,evidenceCount:i.evidence.length,target:i.target}))
+        };
+      }catch(e){}
+      return{
+        profile:{school:p.school||"",administration:p.administration||"",counselor:p.counselor||"",period:p.period||"",academicYear:p.academicYear||""},
+        stats:{totalReports,totalBeneficiaries,totalPrograms,totalTasksDone,totalMeetings,totalSurveys},
+        achievementPeriods,externalEvaluation
+      };
+    }
+    async function publishShowcaseSnapshot(){
+      if(!uid)return;
+      try{
+        const snapshot=computeShowcaseSnapshot();
+        await setDoc(doc(db,"public_showcase",uid),{...snapshot,uid,updatedAt:serverTimestamp()},{merge:false});
+      }catch(e){console.warn("تعذر تحديث صفحة المعاينة العامة",e)}
+    }
+    function scheduleShowcasePublish(){
+      if(!uid)return;
+      clearTimeout(showcasePushTimer);
+      showcasePushTimer=setTimeout(()=>{publishShowcaseSnapshot()},2500);
+    }
+    window.__cloudUid=()=>uid;
+    window.__publishShowcaseNow=()=>publishShowcaseSnapshot();
 
     function schedulePush(key,value){
       lastAppliedValue[key]=value; // اعتبر هذه القيمة معروفة محليًا لتفادي حلقة التحديث
@@ -6714,9 +6789,10 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         if(!uid)return;
         if(key===REPORTS_KEY){
           try{pushReportsDiff(JSON.parse(value||"[]"))}catch(e){}
+          scheduleShowcasePublish();
           return;
         }
-        if(key.startsWith("counselor_")&&!DEVICE_LOCAL_KEYS.has(key))schedulePush(key,value);
+        if(key.startsWith("counselor_")&&!DEVICE_LOCAL_KEYS.has(key)){schedulePush(key,value);scheduleShowcasePublish()}
       };
     }
 
@@ -6727,6 +6803,7 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       await runMigrationIfNeeded();
       listenKv();
       listenReports();
+      scheduleShowcasePublish();
       toast?.("تم تسجيل الدخول — بياناتك تُزامَن الآن مع جهازك الآخر");
     }
 

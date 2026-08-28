@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ملف الأعمال — معاينة عامة</title>
+<style>
+  :root{
+    --bg:#0f2f2b;--card:#ffffff;--ink:#14213a;--muted:#5b6472;--accent:#0f8c72;
+    --accent2:#1673a4;--soft:#eef6f4;--line:#e6ebe9;--warn:#d97706;--danger:#c23c4a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0f2f2b 0,#123a34 220px,#f4f7f6 220px);color:var(--ink);
+    font-family:"Segoe UI",Tahoma,Arial,sans-serif;direction:rtl;min-height:100vh}
+  .wrap{max-width:760px;margin:0 auto;padding:22px 16px 60px}
+  .top{color:#fff;text-align:center;padding:14px 8px 26px}
+  .top .logo{width:52px;height:52px;object-fit:contain;background:#fff;border-radius:14px;padding:6px;margin-bottom:10px}
+  .top h1{margin:0 0 4px;font-size:20px}
+  .top p{margin:0;font-size:13px;opacity:.85}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(15,40,35,.08);padding:18px;margin-bottom:16px}
+  .identity{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}
+  .identity b{font-size:17px}
+  .identity span{font-size:12.5px;color:var(--muted)}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .stat{background:var(--soft);border-radius:12px;padding:12px 6px;text-align:center}
+  .stat b{display:block;font-size:20px;color:var(--accent)}
+  .stat span{font-size:11px;color:var(--muted)}
+  h2.section-title{font-size:15px;margin:26px 0 10px;padding-right:10px;border-right:4px solid var(--accent);color:var(--ink)}
+  .period-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .period-card .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .period-card .head b{font-size:14px}
+  .period-card .head small{color:var(--muted);font-size:11px}
+  .mini-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .mini-stats div{background:var(--soft);border-radius:8px;padding:6px 4px;text-align:center}
+  .mini-stats b{display:block;font-size:14px}
+  .mini-stats span{font-size:10px;color:var(--muted)}
+  .readiness-ring-row{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+  .readiness-ring{width:74px;height:74px;border-radius:50%;flex:none;
+    background:conic-gradient(var(--accent) calc(var(--pct,0)*1%), #e7ecea 0);
+    display:flex;align-items:center;justify-content:center}
+  .readiness-ring i{width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:bold;font-size:15px}
+  .readiness-text b{display:block;font-size:14px}
+  .readiness-text span{font-size:12px;color:var(--muted)}
+  .indicator-row{margin-bottom:10px}
+  .indicator-row .head{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+  .indicator-bar{height:7px;border-radius:5px;background:#eef1f0;overflow:hidden}
+  .indicator-bar span{display:block;height:100%;border-radius:5px;background:var(--accent2)}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 10px}
+  .footer-note{text-align:center;color:#8a93a0;font-size:11px;margin-top:24px;line-height:1.8}
+  .state-screen{color:#fff;text-align:center;padding:70px 16px}
+  .state-screen b{display:block;font-size:16px;margin-bottom:8px}
+  .state-screen span{font-size:13px;opacity:.85}
+  .spinner{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;
+    animation:spin 1s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="state-screen"><div class="spinner"></div><b>جارٍ تحميل ملف الأعمال…</b><span>يستغرق هذا لحظات قليلة</span></div>
+</div>
+
+<script type="module">
+const FIREBASE_SDK_VERSION="12.18.0";
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBFbOuHt-fLt37_Hfx-7UYVo9SPEkJpnF4",
+  authDomain:"student-counselor-app-eb604.firebaseapp.com",
+  projectId:"student-counselor-app-eb604",
+  storageBucket:"student-counselor-app-eb604.firebasestorage.app",
+  messagingSenderId:"777786680742",
+  appId:"1:777786680742:web:915ece5af63bfc5378db67"
+};
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString("ar-SA-u-nu-latn",{year:"numeric",month:"long",day:"numeric"})}catch{return "—"}}
+function fmtDateTime(iso){try{return new Date(iso).toLocaleString("ar-SA-u-nu-latn")}catch{return "—"}}
+
+function renderState(html){document.getElementById("root").innerHTML=`<div class="state-screen">${html}</div>`}
+
+function renderShowcase(data){
+  const p=data.profile||{},s=data.stats||{},periods=data.achievementPeriods||[],ev=data.externalEvaluation;
+  const statCards=[
+    [s.totalReports||0,"تقارير موثّقة"],
+    [s.totalBeneficiaries||0,"مستفيدون"],
+    [s.totalPrograms||0,"برامج"],
+    [s.totalTasksDone||0,"مهام منجزة"],
+    [s.totalMeetings||0,"اجتماعات لجان"],
+    [s.totalSurveys||0,"استبانات"]
+  ].map(([v,l])=>`<div class="stat"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("");
+
+  const periodsHTML=periods.length?periods.map(r=>`
+    <div class="period-card">
+      <div class="head"><b>ملف الإنجاز — ${esc(r.label||"")}</b><small>${r.generatedAt?fmtDate(r.generatedAt):""}</small></div>
+      <div class="mini-stats">
+        <div><b>${esc(r.programCount||0)}</b><span>برامج</span></div>
+        <div><b>${esc(r.studentCount||0)}</b><span>مستفيدون</span></div>
+        <div><b>${esc(r.completedTaskCount||0)}</b><span>مهام</span></div>
+        <div><b>${esc(r.programReportCount||0)}</b><span>تقارير</span></div>
+      </div>
+    </div>`).join(""):`<div class="empty">لا توجد ملفات إنجاز محفوظة بعد.</div>`;
+
+  let externalHTML=`<div class="empty">لا تتوفر بيانات التقويم الخارجي بعد.</div>`;
+  if(ev&&Array.isArray(ev.indicators)){
+    const pct=Math.max(0,Math.min(100,Number(ev.readiness)||0));
+    const rows=ev.indicators.map(i=>`
+      <div class="indicator-row">
+        <div class="head"><span>${esc(i.code||"")} · ${esc(i.title||"")}</span><span>${esc(i.score||0)}%</span></div>
+        <div class="indicator-bar"><span style="width:${Math.max(0,Math.min(100,Number(i.score)||0))}%"></span></div>
+      </div>`).join("");
+    externalHTML=`
+      <div class="readiness-ring-row">
+        <div class="readiness-ring" style="--pct:${pct}"><i>${pct}%</i></div>
+        <div class="readiness-text"><b>جاهزية الملف الشامل</b><span>${esc(ev.evidenceCount||0)} شاهدًا موثقًا · ${esc(ev.strong||0)} من 14 مؤشرًا بمستوى متقدم</span></div>
+      </div>
+      ${rows}`;
+  }
+
+  document.getElementById("root").innerHTML=`
+    <div class="wrap">
+      <div class="top">
+        <img class="logo" src="assets/ministry-logo.png?v=127" alt="شعار وزارة التعليم" onerror="this.style.display='none'">
+        <h1>ملف أعمال الموجّه الطلابي</h1>
+        <p>معاينة عامة — تُحدَّث تلقائيًا</p>
+      </div>
+      <div class="card">
+        <div class="identity">
+          <b>${esc(p.counselor||"الموجّه الطلابي")}</b>
+          <span>${esc(p.school||"")}${p.administration?` · ${esc(p.administration)}`:""}</span>
+          <span>${p.period?esc(p.period):""}${p.academicYear?` · ${esc(p.academicYear)}`:""}</span>
+        </div>
+        <div class="stats-grid">${statCards}</div>
+      </div>
+
+      <h2 class="section-title">ملف الإنجاز</h2>
+      <div class="card">${periodsHTML}</div>
+
+      <h2 class="section-title">الملف الشامل (التقويم الخارجي)</h2>
+      <div class="card">${externalHTML}</div>
+
+      <p class="footer-note">آخر تحديث: ${data.updatedAt?fmtDateTime(data.updatedAt):"—"}<br>
+      هذه الصفحة تعرض إحصائيات وملخصات مهنية مجمّعة فقط، ولا تحتوي على أسماء طلاب أو بيانات شخصية.</p>
+    </div>`;
+}
+
+(async function init(){
+  const uid=new URLSearchParams(location.search).get("u");
+  if(!uid){renderState("<b>رابط غير مكتمل</b><span>لا يحتوي الرابط على معرّف صحيح.</span>");return}
+  try{
+    const [{initializeApp}, {getFirestore,doc,getDoc,onSnapshot}]=await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`)
+    ]);
+    const app=initializeApp(FIREBASE_CONFIG);
+    const db=getFirestore(app);
+    const ref=doc(db,"public_showcase",uid);
+    const first=await getDoc(ref);
+    if(!first.exists()){
+      renderState("<b>لا توجد معاينة منشورة بعد</b><span>لم يُفعّل صاحب الحساب رابط المعاينة العامة بعد، أو لم يحفظ أي عمل حتى الآن.</span>");
+      return;
+    }
+    renderShowcase(first.data());
+    onSnapshot(ref,snap=>{if(snap.exists())renderShowcase(snap.data())});
+  }catch(e){
+    console.error(e);
+    renderState("<b>تعذّر تحميل الصفحة</b><span>تحقق من اتصالك بالإنترنت ثم أعد المحاولة.</span>");
+  }
+})();
+</script>
+</body>
+</html>
