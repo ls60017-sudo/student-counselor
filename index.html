@@ -2589,7 +2589,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=137,APP_UPDATE_DATE="28 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=138,APP_UPDATE_DATE="28 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6804,6 +6804,12 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       listenKv();
       listenReports();
       scheduleShowcasePublish();
+      // Update 138: renderStorageUsageMeter() (وبالتالي زر "رابط/QR معاينة عامة") يعتمد على
+      // window.cloudSignOut ليعرف إن المزامنة نشطة. لو تم أول رسم لهذا القسم قبل ما يوصل هنا
+      // (سباق طبيعي بين رسم الصفحة الأولي وتحميل مكتبة Firebase عبر الشبكة)، يبقى الزر مختفيًا
+      // للأبد لأن runMigrationIfNeeded() في الحالة العادية (جهاز مستخدم من قبل) يرجع مبكرًا
+      // بدون استدعاء refreshAllViews(). نستدعيها هنا صراحة لضمان ظهور الزر دائمًا بعد الدخول.
+      try{renderStorageUsageMeter?.()}catch(e){}
       toast?.("تم تسجيل الدخول — بياناتك تُزامَن الآن مع جهازك الآخر");
     }
 
