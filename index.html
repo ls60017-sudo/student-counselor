@@ -2606,7 +2606,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=141,APP_UPDATE_DATE="28 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=142,APP_UPDATE_DATE="28 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -4130,14 +4130,14 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const modal=document.createElement("div");
     modal.id="publicShowcaseModal";
     modal.style.cssText="position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px";
-    modal.innerHTML=`<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:22px;text-align:center;direction:rtl;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.35)">
-      <h3 style="margin:0 0 8px;font-size:18px">رابط المعاينة العامة</h3>
+    modal.innerHTML=`<div style="background:#fff;color:#14213a;border-radius:16px;max-width:360px;width:100%;padding:22px;text-align:center;direction:rtl;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <h3 style="margin:0 0 8px;font-size:18px;color:#14213a">رابط المعاينة العامة</h3>
       <p style="margin:0 0 14px;font-size:12.5px;color:#555;line-height:1.7">امسح الكود أو شارك الرابط مع أي زائر ليتصفح ملف الإنجاز والملف الشامل مباشرة من جواله — يتحدّث تلقائيًا مع كل عمل جديد تضيفه. لحماية خصوصية الطلاب، الصفحة تعرض فقط إحصائيات وملخصات مهنية، ولا تعرض أي اسم طالب أو تفاصيل شخصية.</p>
       <div style="display:flex;justify-content:center;margin-bottom:14px">${localQrSvgHTML(url,"public-showcase-qr")}</div>
-      <input id="publicShowcaseUrlInput" readonly value="${url}" onclick="this.select()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:12px;margin-bottom:10px;direction:ltr;text-align:center">
+      <input id="publicShowcaseUrlInput" readonly value="${url}" onclick="this.select()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:12px;margin-bottom:10px;direction:ltr;text-align:center;background:#fff;color:#14213a">
       <div style="display:flex;gap:8px">
         <button type="button" id="publicShowcaseCopyBtn" style="flex:1;padding:9px;border:none;border-radius:8px;background:#0f8c72;color:#fff;font-weight:bold;cursor:pointer">نسخ الرابط</button>
-        <button type="button" onclick="document.getElementById('publicShowcaseModal').remove()" style="flex:1;padding:9px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer">إغلاق</button>
+        <button type="button" onclick="document.getElementById('publicShowcaseModal').remove()" style="flex:1;padding:9px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#14213a;cursor:pointer">إغلاق</button>
       </div>
     </div>`;
     modal.addEventListener("click",e=>{if(e.target===modal)modal.remove()});
@@ -6551,8 +6551,8 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         <div style="background:#fff;color:#14213a;max-width:380px;width:100%;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.35)">
           <h2 style="margin:0 0 6px;font-size:20px">تسجيل الدخول لمزامنة بياناتك</h2>
           <p style="margin:0 0 16px;font-size:13px;color:#555">سجّل دخولك بنفس الحساب من جوالك وجهازك؛ أي تعديل تسويه في أي جهاز ينعكس تلقائيًا في الثاني.</p>
-          <input id="cloudAuthEmail" type="email" placeholder="البريد الإلكتروني" style="width:100%;box-sizing:border-box;padding:10px;margin-bottom:8px;border:1px solid #ccc;border-radius:8px;font-size:14px">
-          <input id="cloudAuthPassword" type="password" placeholder="كلمة المرور (6 أحرف فأكثر)" style="width:100%;box-sizing:border-box;padding:10px;margin-bottom:12px;border:1px solid #ccc;border-radius:8px;font-size:14px">
+          <input id="cloudAuthEmail" type="email" placeholder="البريد الإلكتروني" style="width:100%;box-sizing:border-box;padding:10px;margin-bottom:8px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#14213a">
+          <input id="cloudAuthPassword" type="password" placeholder="كلمة المرور (6 أحرف فأكثر)" style="width:100%;box-sizing:border-box;padding:10px;margin-bottom:12px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#14213a">
           <div style="display:flex;gap:8px">
             <button id="cloudAuthSignIn" style="flex:1;padding:10px;border:none;border-radius:8px;background:#0f8c72;color:#fff;font-weight:bold;cursor:pointer">دخول</button>
             <button id="cloudAuthSignUp" style="flex:1;padding:10px;border:1px solid #0f8c72;border-radius:8px;background:#fff;color:#0f8c72;font-weight:bold;cursor:pointer">إنشاء حساب (أول مرة)</button>
