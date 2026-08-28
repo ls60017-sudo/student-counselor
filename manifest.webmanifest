@@ -1,0 +1,21 @@
+{
+  "name": "تطبيق الموجّه الطلابي — أثر",
+  "short_name": "الموجّه الطلابي",
+  "description": "سكرتير مهني شخصي للموجّه الطلابي لإدارة الخطة والبرامج والتوثيق والتقارير.",
+  "lang": "ar",
+  "dir": "rtl",
+  "id": "/",
+  "start_url": "/?source=installed-app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f5f7fb",
+  "theme_color": "#382972",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "/icons/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

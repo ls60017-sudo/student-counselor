@@ -1,0 +1,6 @@
+.vercel
+.env*
+.firebase
+index.html.bak
+.write_test
+node_modules
