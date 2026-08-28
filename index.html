@@ -2606,7 +2606,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=140,APP_UPDATE_DATE="28 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=141,APP_UPDATE_DATE="28 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6604,7 +6604,6 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       const p=appProfile||emptyProfile;
       const reports=typeof savedProgramReports==="function"?savedProgramReports():[];
       const totalReports=reports.length;
-      const totalBeneficiaries=reports.reduce((sum,r)=>sum+(Number(r.beneficiaries)||0),0);
       const totalPrograms=typeof editablePrograms!=="undefined"?editablePrograms.length:0;
       const totalTasksDone=typeof tasks!=="undefined"?tasks.filter(t=>t.done).length:0;
       const totalMeetings=typeof committees!=="undefined"?committees.reduce((sum,c)=>sum+((c.meetings||[]).length),0):0;
@@ -6625,7 +6624,7 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       }catch(e){}
       return{
         profile:{school:p.school||"",administration:p.administration||"",counselor:p.counselor||"",period:p.period||"",academicYear:p.academicYear||""},
-        stats:{totalReports,totalBeneficiaries,totalPrograms,totalTasksDone,totalMeetings,totalSurveys},
+        stats:{totalReports,totalPrograms,totalTasksDone,totalMeetings,totalSurveys},
         achievementPeriods,externalEvaluation
       };
     }
