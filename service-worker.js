@@ -1,4 +1,4 @@
-const CACHE_NAME = "student-counselor-v0.40.15-beta-update138-showcasefix";
+const CACHE_NAME = "student-counselor-v0.40.15-beta-update139-showcasehome";
 const APP_SHELL = [
   "/",
   "/index.html",
