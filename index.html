@@ -147,6 +147,9 @@
     .badge{font-size:11px;padding:6px 9px;border-radius:20px;background:var(--primary-soft);color:var(--primary);white-space:nowrap}
     .badge.warning{background:#fff4df;color:var(--warning)}
     .badge.success{background:#e8f7f2;color:var(--success)}
+    .task-actions{display:flex;align-items:center;gap:6px}
+    .task-delete-btn{width:30px;height:30px;flex:none;border:1px solid color-mix(in srgb,var(--danger) 35%,var(--border));border-radius:9px;background:color-mix(in srgb,var(--danger) 10%,var(--panel));color:var(--danger);font-size:14px;cursor:pointer;display:grid;place-items:center}
+    .task-delete-btn:hover{background:var(--danger);color:#fff}
     .progress-wrap{display:grid;gap:14px}
     .progress-row{display:grid;gap:7px}
     .progress-head{display:flex;justify-content:space-between;font-size:13px}
@@ -573,6 +576,7 @@
       .table-wrap{overflow:auto}
       .task{grid-template-columns:auto 1fr}
       .task .badge{grid-column:2}
+      .task .task-actions{grid-column:2;justify-self:start}
     }
     @media(max-width:620px){
       .daily-hero{gap:9px;margin-bottom:10px}.today-card{padding:13px;border-radius:17px;box-shadow:0 10px 24px var(--today-shadow)!important}.today-head{margin-bottom:8px;gap:8px}.today-title-wrap{gap:9px}.daily-icon{width:38px;height:38px;border-radius:11px;font-size:20px}.today-card h3{font-size:16px;font-weight:900}.today-card small{font-size:9px;font-weight:700}.daily-progress{height:6px;margin:7px 0 9px}.daily-task-list{gap:6px}.daily-task-item{grid-template-columns:auto 1fr auto;padding:7px 8px;border-radius:10px;gap:7px}.daily-task-item:nth-child(n+4){display:none}.daily-task-check{width:24px;height:24px;font-size:12px}.daily-task-name{font-size:10.5px;font-weight:900}.daily-task-state{font-size:8px;min-width:auto;font-weight:800}.daily-open-btn{display:none}.daily-more-button{display:block;width:100%;border:1px solid #ffffff42;background:#ffffff18;color:#fff;border-radius:9px;padding:7px;font:inherit;font-size:9px;font-weight:900}.daily-encouragement{font-size:9px;margin-top:7px;padding:7px 8px}.motivation-card{padding:13px 14px;border-radius:17px;min-height:0}.motivation-label{display:inline-flex;width:max-content;align-items:center;border-radius:20px;background:#eee9f8;color:#382972;padding:6px 10px;font-size:10px;font-weight:900;margin-bottom:8px}.motivation-label:before{content:"✦";margin-left:5px;color:#208caa}.motivation-text{font-size:13px;line-height:1.75;font-weight:900}.motivation-day{display:none}.motivation-card:after{font-size:78px;bottom:-22px}
@@ -2606,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=145,APP_UPDATE_DATE="28 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=146,APP_UPDATE_DATE="29 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -2995,8 +2999,19 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     return `<article class="task ${t.done?"completed":""}">
       <span class="task-completion-mark" aria-label="${t.done?'مهمة مكتملة':'مهمة تحتاج تنفيذ'}">${t.done?'✓':'◷'}</span>
       <button class="task-main-action" type="button" onclick="openTaskExecution(${i})"><span class="task-title">${escapeHTML(t.title)}</span><span class="task-meta">${escapeHTML(t.meta)}</span></button>
-      <span class="badge ${badgeClass}">${t.done?"مكتملة":t.priority}</span>
+      <span class="task-actions">
+        <span class="badge ${badgeClass}">${t.done?"مكتملة":t.priority}</span>
+        <button class="task-delete-btn" type="button" title="حذف المهمة" aria-label="حذف مهمة ${escapeHTML(t.title)}" onclick="deleteTaskByIndex(${i})">🗑</button>
+      </span>
     </article>`;
+  }
+  function deleteTaskByIndex(i){
+    const task=tasks[i];if(!task)return;
+    if(!confirm(`سيتم حذف مهمة «${task.title}» نهائيًا ولن يمكن التراجع عن ذلك. هل تريد المتابعة؟`))return;
+    tasks.splice(i,1);
+    save();
+    renderTasks();
+    toast("تم حذف المهمة");
   }
 
 
