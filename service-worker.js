@@ -1,4 +1,4 @@
-const CACHE_NAME = "student-counselor-v0.40.15-beta-update159-recordoverlap";
+const CACHE_NAME = "student-counselor-v0.40.15-beta-update160-taskcompletion";
 const APP_SHELL = [
   "/",
   "/index.html",

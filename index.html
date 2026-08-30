@@ -1278,7 +1278,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 159 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 160 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2614,7 +2614,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=159,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=160,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -4907,12 +4907,64 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     // Update 157: حذف تقرير هذه المهمة مباشرة من داخلها (كان متاحًا في البرامج والتوثيق فقط)
     const linkedId=t.execution?.reportId;
     const linkedReport=linkedId?all.find(r=>String(r.id)===String(linkedId)):null;
-    const deleteBtn=linkedReport?`<button type="button" class="task-related-reports-btn danger" onclick="deleteThisTaskReport157()"><span>🗑</span> حذف تقرير هذه المهمة</button>`:"";
+    // Update 160: نسمّي رقم التقرير الذي سيُحذف حتى لا يلتبس على المستخدم عند تعدد التقارير
+    const linkedOrder=linkedReport?matches.findIndex(r=>String(r.id)===String(linkedReport.id))+1:0;
+    const deleteLabel=linkedOrder>0&&matches.length>1?`حذف التقرير رقم ${linkedOrder}`:"حذف تقرير هذه المهمة";
+    const deleteBtn=linkedReport?`<button type="button" class="task-related-reports-btn danger" onclick="deleteThisTaskReport157()"><span>🗑</span> ${deleteLabel}</button>`:"";
     box.innerHTML=viewBtn+extraBtn+deleteBtn;
   }
   // يحذف التقرير المرتبط بهذه المهمة فقط — لا المهمة ولا بقية تقارير البرنامج.
   // يعتمد على deleteSavedProgramReport نفسها المستخدمة في «البرامج والتوثيق»
   // لضمان نفس السلوك: حذف من كل الأقسام وإعادة المهمة إلى غير مكتملة.
+  /* Update 160: حالة إنجاز المهمة يجب أن تتبع تقاريرها المحفوظة فعليًا.
+     كانت تُضبط فقط داخل زر «اعتماد وإنهاء المهمة»، فإذا وثّق المستخدم عبر «تقرير جديد
+     لنفس البرنامج» بقيت المهمة «غير منجزة» رغم وجود تقرير لها — والعكس: حذف تقرير واحد
+     كان يُرجع المهمة غير منجزة حتى لو بقيت لها تقارير أخرى.
+     القاعدة الآن: أي تقرير مرتبط بالمهمة (الأساسي أو أي تقرير إضافي) يجعلها منجزة. */
+  function taskReportBaseKey160(task,index){
+    const linked=String(task?.execution?.linkedTaskKey||"");
+    return task?.planKey||(linked?linked.split("-extra-")[0]:"")||`task-${index}`;
+  }
+  function taskLinkedReports160(task,index){
+    const base=taskReportBaseKey160(task,index);
+    if(!base)return [];
+    return savedProgramReports().filter(r=>{
+      const key=String(r?.linkedTaskKey||"");
+      return key===base||key.startsWith(base+"-extra-");
+    });
+  }
+  function syncTaskCompletionFromReports160(task,index){
+    if(!task)return false;
+    const linked=taskLinkedReports160(task,index);
+    const wasDone=!!task.done;
+    if(linked.length){
+      const latest=linked.slice().sort((a,b)=>Number(a.id||0)-Number(b.id||0)).at(-1);
+      task.done=true;
+      task.execution={...(task.execution||{}),status:"approved",
+        approvedAt:task.execution?.approvedAt||new Date().toISOString(),
+        reportId:latest.id,linkedTaskKey:latest.linkedTaskKey,program:latest.program};
+    }else if(task.execution?.status==="approved"||task.done){
+      task.done=false;
+      const execution={...(task.execution||{}),status:"draft"};
+      delete execution.reportId;delete execution.approvedAt;
+      task.execution=execution;
+    }
+    return wasDone!==!!task.done;
+  }
+  function reconcileAllTaskCompletion160(){
+    if(typeof tasks==="undefined"||!Array.isArray(tasks))return;
+    let changed=false;
+    tasks.forEach((task,index)=>{if(syncTaskCompletionFromReports160(task,index))changed=true});
+    if(changed){try{save();renderTasks?.();renderTermPlan?.();renderPerformanceKpis?.()}catch(e){}}
+  }
+  // نشغّلها أكثر من مرة: مرة بعد تحميل الواجهة، ومرة بعد أن تستقر المزامنة السحابية
+  // (السحب الأول من السحابة قد يعيد كتابة المهام بعد التشغيل الأول فيلغي التصحيح).
+  function scheduleTaskCompletionReconcile160(){
+    [1200,4000,9000].forEach(delay=>setTimeout(()=>{try{reconcileAllTaskCompletion160()}catch(e){}},delay));
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",scheduleTaskCompletionReconcile160,{once:true});
+  else scheduleTaskCompletionReconcile160();
+
   function deleteThisTaskReport157(){
     if(currentExecutionTaskIndex<0)return;
     const task=tasks[currentExecutionTaskIndex],reportId=task?.execution?.reportId;
@@ -4977,6 +5029,11 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     data.id=Date.now();data.linkedTaskKey=`${data.linkedTaskKey}-extra-${Date.now()}`;
     const savedReport=upsertLinkedProgramReport(data);
     queueFileForNoor({uid:`program-${savedReport.id}`,category:"programs",title:savedReport.title,meta:`${savedReport.program} · ${savedReport.date||""}`},false);
+    // Update 160: أي تقرير محفوظ للمهمة يجعلها منجزة، حتى لو لم يُستخدم زر الاعتماد
+    if(currentExecutionTaskIndex>=0){
+      syncTaskCompletionFromReports160(tasks[currentExecutionTaskIndex],currentExecutionTaskIndex);
+      try{save();renderTasks?.();renderTermPlan?.();renderPerformanceKpis?.()}catch(e){}
+    }
     restoreAdditionalReportBackup();
     toast(`✓ أُنشئ تقرير إضافي منفصل داخل ملف «${savedReport.program}» دون التأثير على التقرير الحالي`);
     renderTaskRelatedReports122();
@@ -6522,7 +6579,7 @@ ${bullets}
     const saved=savedProgramReports(),report=saved.find(item=>String(item.id)===String(id));if(!report)return;
     if(!confirm(`سيُحذف تقرير «${report.title||report.program}» من جميع الأقسام المرتبطة، وستعود مهمته إلى غير مكتملة. هل تريد المتابعة؟`))return;
     const remaining=saved.filter(item=>String(item.id)!==String(id));localStorage.setItem("counselor_saved_program_reports",JSON.stringify(remaining));
-    tasks.forEach(task=>{const linkedId=task.execution?.reportId,linkedKey=task.execution?.linkedTaskKey||task.planKey;if(String(linkedId)===String(id)||(report.linkedTaskKey&&String(linkedKey)===String(report.linkedTaskKey))){task.done=false;const execution={...(task.execution||{}),status:"draft"};delete execution.reportId;delete execution.approvedAt;task.execution=execution}});save();
+    tasks.forEach((task,index)=>syncTaskCompletionFromReports160(task,index));save();
     if(String(activeSavedProgramReportId)===String(id))activeSavedProgramReportId=null;
     // Update 157: renderDashboard غير معرّفة في هذا الإصدار، وكانت ترمي استثناءً يقطع بقية
     // التحديث ويمنع ظهور رسالة التأكيد — فيبدو الحذف وكأنه لم يتم. نستدعي المتاح فقط بأمان.
