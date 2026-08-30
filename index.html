@@ -1274,7 +1274,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 149 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 150 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       البيانات محفوظة محليًا داخل المتصفح للتجربة فقط.
     </div>
@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=149,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=150,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6675,7 +6675,7 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       return keys;
     }
 
-    let uid=null,pushTimers={},lastAppliedValue={},nativeSetItem=localStorage.setItem.bind(localStorage),stopKvListener=null,stopReportsListener=null,pendingReportWrites={},showcasePushTimer=null;
+    let uid=null,pushTimers={},lastAppliedValue={},nativeSetItem=localStorage.setItem.bind(localStorage),stopKvListener=null,stopReportsListener=null,pendingReportWrites={},showcasePushTimer=null,reportsPushRetryTimer=null;
 
     /* Update 137: "صفحة المعاينة العامة" — رابط/QR يفتح صفحة عامة (بدون تسجيل دخول) تعرض
        إحصائيات ملخّصة عن عمل الموجّه (عدد التقارير/البرامج/المستفيدين) بالإضافة إلى ملخصات
@@ -6788,15 +6788,23 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
           report.photos=cached.photos;cleanup(report);return;
         }
         const photos=[];
+        let readFailed=false;
         for(let pi=0;pi<chunkCounts.length;pi++){
           const parts=[];
           for(let ci=0;ci<(Number(chunkCounts[pi])||0);ci++){
-            try{const snap=await getDoc(doc(reportPhotosCol(),photoChunkId(id,pi,ci)));parts.push(snap.exists()?String(snap.data().data||""):"")}
-            catch(e){console.warn("تعذر تحميل جزء صورة",e);parts.push("")}
+            try{
+              const snap=await getDoc(doc(reportPhotosCol(),photoChunkId(id,pi,ci)));
+              if(!snap.exists()){readFailed=true;parts.push("")}
+              else parts.push(String(snap.data().data||""));
+            }
+            catch(e){console.warn("تعذر تحميل جزء صورة",e);readFailed=true;parts.push("")}
           }
           photos.push(parts.join(""));
         }
-        report.photos=photos.filter(Boolean);
+        // Update 150: لو تعذّر جلب أي جزء، لا نستبدل نسخة محلية سليمة بنسخة ناقصة —
+        // وإلا فالنسخة الناقصة تُرفع لاحقًا وتمحو الصور الأصلية من السحابة.
+        if(readFailed&&cached&&Array.isArray(cached.photos)&&cached.photos.length)report.photos=cached.photos;
+        else report.photos=photos.filter(Boolean);
         cleanup(report);
       }));
       return list;
@@ -6843,11 +6851,14 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       const oldList=(()=>{try{return JSON.parse(localStorage.getItem("__sync_reports_baseline")||"[]")}catch{return []}})();
       const oldIds=new Set(oldList.map(r=>String(r.id)));
       const newIds=new Set(newList.map(r=>String(r.id)));
-      const ops=[];
+      // Update 150: نتتبّع عمليات كل تقرير على حدة بدل خلطها في قائمة واحدة، حتى نعرف
+      // بالضبط أي تقرير نجح رفعه وأيها فشل. راجع تعليق الأساس (baseline) في نهاية الدالة.
+      const perReport=[],deleteOps=[];
       let flagsChanged=false;
       newList.forEach(report=>{
         const id=String(report.id),before=oldList.find(r=>String(r.id)===id);
         if(JSON.stringify(before)===JSON.stringify(report))return;
+        const ops=[];
         // Update 149: نفصل الصور عن مستند التقرير ونرفعها كمستندات مستقلة، فيبقى
         // مستند التقرير نصيًا صغيرًا لا يقترب من حد الميجابايت مهما كثرت الصور.
         const photos=Array.isArray(report.photos)?report.photos:[];
@@ -6878,17 +6889,44 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         }
         if(report.cloudSyncSkipped){delete report.cloudSyncSkipped;flagsChanged=true}
         ops.push(setDoc(doc(reportsCol(),id),payload,{merge:false}));
+        perReport.push({id,report,ops});
       });
       oldIds.forEach(id=>{
         if(newIds.has(id))return;
-        ops.push(deleteDoc(doc(reportsCol(),id)));
+        deleteOps.push(deleteDoc(doc(reportsCol(),id)));
         // Update 149: عند حذف تقرير نحذف أيضًا مستندات صوره حتى لا تبقى معلّقة بلا مالك
         const removed=oldList.find(r=>String(r.id)===id),removedPhotos=Array.isArray(removed?.photos)?removed.photos:[];
-        removedPhotos.forEach((src,pi)=>splitPhotoChunks(src).forEach((chunk,ci)=>ops.push(deleteDoc(doc(reportPhotosCol(),photoChunkId(id,pi,ci))))));
+        removedPhotos.forEach((src,pi)=>splitPhotoChunks(src).forEach((chunk,ci)=>deleteOps.push(deleteDoc(doc(reportPhotosCol(),photoChunkId(id,pi,ci))))));
       });
       if(flagsChanged){try{nativeSetItem(REPORTS_KEY,JSON.stringify(newList))}catch(e){}}
-      localStorage.setItem("__sync_reports_baseline",JSON.stringify(newList));
-      await Promise.all(ops).catch(e=>console.warn("تعذر مزامنة بعض التقارير",e));
+
+      // Update 150 — إصلاح جوهري: كان الأساس (baseline) يُكتب *قبل* تنفيذ الرفع، وكل فشل
+      // يُبتلع بصمت. فلو تعثّر الرفع (انقطاع نت، أو فشل أي من مستندات الصور) يظن التطبيق
+      // أن التقرير وصل السحابة، ثم يأتي مستمع listenReports ولا يجده هناك فيمحوه من الجهاز
+      // — وهذا بالضبط سبب «يقول تم الاعتماد ولما أرجع ما ألقاه». الآن ننتظر النتيجة أولًا،
+      // ولا نسجّل في الأساس إلا التقارير التي نجح رفعها فعلًا؛ الفاشلة تبقى خارج الأساس
+      // فتُعاد المحاولة تلقائيًا ويحميها المستمع من المحو.
+      const settled=await Promise.allSettled(perReport.map(entry=>Promise.all(entry.ops)));
+      await Promise.allSettled(deleteOps);
+      const syncedIds=new Set(),failed=[];
+      settled.forEach((result,index)=>{
+        if(result.status==="fulfilled")syncedIds.add(perReport[index].id);
+        else{failed.push(perReport[index]);console.warn("تعذر رفع تقرير للسحابة",perReport[index].id,result.reason)}
+      });
+      const changedIds=new Set(perReport.map(entry=>entry.id));
+      const baseline=newList.filter(report=>{const id=String(report.id);return !changedIds.has(id)||syncedIds.has(id)});
+      localStorage.setItem("__sync_reports_baseline",JSON.stringify(baseline));
+
+      if(failed.length){
+        toast?.(`تعذّر رفع ${failed.length===1?"تقرير":failed.length+" تقارير"} إلى السحابة — محفوظ على هذا الجهاز وستُعاد المحاولة تلقائيًا`);
+        if(!reportsPushRetryTimer){
+          reportsPushRetryTimer=setTimeout(()=>{
+            reportsPushRetryTimer=null;
+            let current=[];try{current=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
+            if(current.length)pushReportsDiff(current);
+          },20000);
+        }
+      }
     }
 
     function listenReports(){
@@ -6912,7 +6950,13 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         let localList=[];try{localList=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
         await attachExternalPhotos(list,localList); // Update 149: إعادة ربط الصور المخزّنة بمستندات منفصلة
         const cloudIds=new Set(list.map(r=>String(r.id)));
-        const preservedLocalOnly=localList.filter(r=>r&&r.cloudSyncSkipped&&!cloudIds.has(String(r.id)));
+        // Update 150: لا نمحو تقريرًا محليًا لمجرد غيابه عن السحابة. نُبقيه إذا كان
+        // معلَّمًا cloudSyncSkipped، أو لم يُسجَّل قط في الأساس كمرفوع بنجاح — فغيابه حينها
+        // سببه فشل رفع (نت/خطأ عابر) لا حذف متعمَّد من جهاز آخر. التقرير المسجَّل في الأساس
+        // والغائب عن السحابة هو وحده الذي يُعتبر محذوفًا فعلًا.
+        let baselineIds=new Set();
+        try{baselineIds=new Set(JSON.parse(localStorage.getItem("__sync_reports_baseline")||"[]").map(r=>String(r.id)))}catch{}
+        const preservedLocalOnly=localList.filter(r=>r&&!cloudIds.has(String(r.id))&&(r.cloudSyncSkipped||!baselineIds.has(String(r.id))));
         const merged=[...list,...preservedLocalOnly];
         writeReportsLocally(merged);
         localStorage.setItem("__sync_reports_baseline",JSON.stringify(merged));
