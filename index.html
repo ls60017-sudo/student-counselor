@@ -1274,7 +1274,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 155 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 156 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=155,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=156,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -4082,9 +4082,26 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
   else setTimeout(reclaimLegacyStorage155,4000);
 
   // Update 155: تحميل الصور من IndexedDB عند الإقلاع ثم إعادة رسم الشاشات المعتمدة عليها
+  // Update 156: نقل لمرة واحدة للصور المحفوظة سابقًا داخل localStorage إلى IndexedDB.
+  // إعادة كتابة القائمة نفسها تكفي، لأن اعتراض الكتابة أعلاه يفصل الصور تلقائيًا.
+  function migrateLocalPhotosToIdb155(){
+    try{
+      const raw=localStorage.getItem(PROGRAM_REPORTS_KEY);
+      if(!raw)return false;
+      const list=JSON.parse(raw);
+      if(!Array.isArray(list)||!list.some(r=>r&&Array.isArray(r.photos)&&r.photos.length))return false;
+      const before=raw.length;
+      localStorage.setItem(PROGRAM_REPORTS_KEY,raw);
+      const after=(localStorage.getItem(PROGRAM_REPORTS_KEY)||"").length;
+      if(before>after)toast?.(`تم نقل صور التقارير إلى تخزين موسّع وتحرير ${formatBytes(before-after)} من مساحة المتصفح`);
+      try{renderStorageUsageMeter?.()}catch(e){}
+      return true;
+    }catch(e){console.warn("تعذر نقل صور التقارير",e);return false}
+  }
   function bootReportPhotoCache155(){
     hydrateReportPhotos().then(loaded=>{
-      if(!loaded)return;
+      const migrated=migrateLocalPhotosToIdb155();
+      if(!loaded&&!migrated)return;
       ["renderProgramReportArchive","renderPrograms","renderTasks","renderPerformanceKpis"].forEach(name=>{
         try{if(typeof window[name]==="function")window[name]()}catch(e){}
       });
