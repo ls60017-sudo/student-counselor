@@ -1274,7 +1274,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 150 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 151 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       البيانات محفوظة محليًا داخل المتصفح للتجربة فقط.
     </div>
@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=150,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=151,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6532,6 +6532,19 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
     return `${list.length}|${parts.join("|")}`;
   }
 
+  // Update 150: عندما تمتلئ مساحة المتصفح نُجرِّد الصور من النسخة المحلية فقط. لكن يجب أن
+  // نحتفظ ببيانات النسخة السحابية (عدد أجزاء كل صورة + البصمة)، وإلا ظنّ كود الرفع لاحقًا
+  // أن المستخدم حذف الصور فيمحوها من السحابة أيضًا — فتضيع نهائيًا بدل أن تبقى قابلة للاسترجاع.
+  function strippedReportCopy(report){
+    const photos=Array.isArray(report.photos)?report.photos:[];
+    const copy={...report,photos:[],photosStoredInCloudOnly:true};
+    if(photos.length){
+      copy.cloudPhotoChunks=photos.map(src=>splitPhotoChunks(src).length);
+      copy.cloudPhotosSig=photosSignature(photos);
+    }
+    return copy;
+  }
+
   // ---- تطبيق قيمة قادمة من الجهاز الآخر على متغيرات التطبيق المحملة في الذاكرة ----
   const VAR_APPLY={
     counselor_notification_read_ids:v=>{}, // مستبعد من المزامنة أصلًا (خاص بكل جهاز)
@@ -6805,6 +6818,8 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         // وإلا فالنسخة الناقصة تُرفع لاحقًا وتمحو الصور الأصلية من السحابة.
         if(readFailed&&cached&&Array.isArray(cached.photos)&&cached.photos.length)report.photos=cached.photos;
         else report.photos=photos.filter(Boolean);
+        // رجعت الصور فعليًا لهذا الجهاز — نرفع علامة "مجرَّدة محليًا" وبياناتها المرافقة
+        if(report.photos.length){delete report.photosStoredInCloudOnly;delete report.cloudPhotoChunks;delete report.cloudPhotosSig}
         cleanup(report);
       }));
       return list;
@@ -6818,8 +6833,8 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       try{nativeSetItem(REPORTS_KEY,JSON.stringify(list))}
       catch(e){
         try{
-          nativeSetItem(REPORTS_KEY,JSON.stringify(list.map(r=>({...r,photos:[],photosStoredInCloudOnly:true}))));
-          toast?.("امتلأت مساحة تخزين هذا المتصفح؛ ستظهر التقارير بدون صور هنا فقط، وصورها محفوظة بأمان في السحابة");
+          nativeSetItem(REPORTS_KEY,JSON.stringify(list.map(r=>(Array.isArray(r?.photos)&&r.photos.length)||r?.photosStoredInCloudOnly?strippedReportCopy(r):r)));
+          toast?.(uid?"امتلأت مساحة تخزين هذا المتصفح؛ ستظهر التقارير بدون صور هنا فقط، وصورها محفوظة في السحابة":"امتلأت مساحة تخزين هذا المتصفح وأُزيلت الصور من النسخة المحلية — سجّل الدخول للمزامنة لحفظ الصور في السحابة");
         }catch(e2){console.warn("تعذر حفظ التقارير محليًا حتى بدون صور",e2)}
       }
     }
@@ -6838,7 +6853,7 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         if(!Array.isArray(list)||!list.length)return false;
         let changed=false;
         const stripped=list.map(r=>{
-          if(r&&Array.isArray(r.photos)&&r.photos.length&&!r.photosStoredInCloudOnly){changed=true;return{...r,photos:[],photosStoredInCloudOnly:true}}
+          if(r&&Array.isArray(r.photos)&&r.photos.length&&!r.photosStoredInCloudOnly){changed=true;return strippedReportCopy(r)}
           return r;
         });
         if(!changed)return false;
@@ -6864,9 +6879,16 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         const photos=Array.isArray(report.photos)?report.photos:[];
         const beforePhotos=Array.isArray(before?.photos)?before.photos:[];
         const newSig=photosSignature(photos);
-        const payload={...report,photos:[],photosExternal:true,photoCount:photos.length,photoChunks:photos.map(src=>splitPhotoChunks(src).length),photosSig:newSig,updatedAt:serverTimestamp(),device:deviceId};
-        delete payload.cloudSyncSkipped;
-        if(newSig!==photosSignature(beforePhotos)){
+        // Update 150: تقرير جُرِّدت صوره محليًا لضيق مساحة المتصفح ليس تقريرًا حُذفت صوره —
+        // النسخة السحابية سليمة، فلا نلمس صورها إطلاقًا ونُبقي بياناتها كما هي.
+        const locallyStripped=Boolean(report.photosStoredInCloudOnly)&&!photos.length&&Array.isArray(report.cloudPhotoChunks);
+        const payload={...report,photos:[],photosExternal:true,
+          photoCount:locallyStripped?report.cloudPhotoChunks.length:photos.length,
+          photoChunks:locallyStripped?report.cloudPhotoChunks:photos.map(src=>splitPhotoChunks(src).length),
+          photosSig:locallyStripped?report.cloudPhotosSig:newSig,
+          updatedAt:serverTimestamp(),device:deviceId};
+        delete payload.cloudSyncSkipped;delete payload.photosStoredInCloudOnly;delete payload.cloudPhotoChunks;delete payload.cloudPhotosSig;
+        if(!locallyStripped&&newSig!==photosSignature(beforePhotos)){
           const wanted=new Set();
           photos.forEach((src,pi)=>splitPhotoChunks(src).forEach((chunk,ci)=>{
             const chunkId=photoChunkId(id,pi,ci);wanted.add(chunkId);
