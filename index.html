@@ -1274,7 +1274,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 153 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 154 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=153,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=154,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6590,6 +6590,23 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
   function normalizeBaselineList(list){
     return (Array.isArray(list)?list:[]).map(entry=>entry&&entry.__photosSig!==undefined?entry:baselineEntry(entry||{}));
   }
+
+  // Update 153b: النسخة المرجعية المخزّنة من قبل تحمل الصور كاملة، ولن تُضغط تلقائيًا إلا
+  // عند أول كتابة جديدة عليها — وقد لا تحدث أبدًا إن لم يتغيّر شيء. فنضغطها هنا مرة واحدة
+  // عند التشغيل لتحرير المساحة فورًا. عملية محلية بحتة لا تمسّ السحابة ولا التقارير.
+  (function compactExistingBaseline153(){
+    try{
+      const raw=localStorage.getItem("__sync_reports_baseline");
+      if(!raw||raw.length<50*1024)return;
+      const list=JSON.parse(raw);
+      if(!Array.isArray(list)||!list.length)return;
+      const compact=JSON.stringify(list.map(baselineEntry));
+      if(compact.length>=raw.length)return;
+      localStorage.setItem("__sync_reports_baseline",compact);
+      console.info(`[مزامنة] ضُغطت النسخة المرجعية من ${Math.round(raw.length/1024)} إلى ${Math.round(compact.length/1024)} ك.ب`);
+      setTimeout(()=>{try{window.renderStorageUsageMeter?.()}catch(e){}},0);
+    }catch(e){console.warn("تعذر ضغط النسخة المرجعية",e)}
+  })();
 
   // Update 150: عندما تمتلئ مساحة المتصفح نُجرِّد الصور من النسخة المحلية فقط. لكن يجب أن
   // نحتفظ ببيانات النسخة السحابية (عدد أجزاء كل صورة + البصمة)، وإلا ظنّ كود الرفع لاحقًا
