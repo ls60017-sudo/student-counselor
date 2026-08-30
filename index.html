@@ -1274,7 +1274,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 154 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 155 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=154,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=155,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -3100,7 +3100,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 
   function planBaseWeeks(){return weeklyPlanData.map(week=>({...week,items:(week.items||[]).filter(item=>!item.emergent&&!item.surveyPlan).map(item=>({...item}))}))}
   function backupTermPlan(reason="تعديل الخطة"){
-    const history=JSON.parse(localStorage.getItem("counselor_term_plan_history")||"[]"),snapshot={id:`plan-backup-${Date.now()}`,reason,createdAt:new Date().toISOString(),weeks:planBaseWeeks(),hidden:[...hiddenPlanItems],linkedTasks:tasks.filter(task=>task.planKey).map(task=>({...task}))};history.unshift(snapshot);localStorage.setItem("counselor_term_plan_history",JSON.stringify(history.slice(0,12)));localStorage.setItem("counselor_term_plan_previous",JSON.stringify(snapshot));return snapshot;
+    const history=JSON.parse(localStorage.getItem("counselor_term_plan_history")||"[]"),snapshot={id:`plan-backup-${Date.now()}`,reason,createdAt:new Date().toISOString(),weeks:planBaseWeeks(),hidden:[...hiddenPlanItems],linkedTasks:tasks.filter(task=>task.planKey).map(task=>task&&task.execution?{...task,execution:{...task.execution,photos:[]}}:({...task}))};history.unshift(snapshot);localStorage.setItem("counselor_term_plan_history",JSON.stringify(history.slice(0,6)));localStorage.setItem("counselor_term_plan_previous",JSON.stringify(snapshot));return snapshot;
   }
   function persistFlexibleTermPlan(label="خطة معدلة يدويًا"){
     const weeks=planBaseWeeks(),payload={fileName:label,importedAt:new Date().toISOString(),weeks,firstWeek:weeks[0]?.week||1,lastWeek:weeks.at(-1)?.week||weeks.length,totalItems:weeks.reduce((sum,week)=>sum+(week.items?.length||0),0),detectedHeadings:weeks.length,extractionMode:"flexible-manual-plan"};localStorage.setItem("counselor_imported_term_plan",JSON.stringify(payload));localStorage.setItem("counselor_hidden_plan_items",JSON.stringify([...hiddenPlanItems]));updateTermPlanSourceLabel();save();renderTermPlan();renderTasks();renderNotificationCenter();return payload;
@@ -3908,7 +3908,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
   }
   function saveProgramReport(fromApproval=false){
     if(!reportApproved){toast("عاين التقرير ثم اضغط اعتماد قبل الحفظ");return}
-    generateReport();const data=currentProgramReportData(),saved=savedProgramReports(),existing=saved.findIndex(report=>String(report.id)===String(data.id));if(existing>=0)saved[existing]=data;else saved.unshift(data);activeSavedProgramReportId=data.id;try{localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved));queueFileForNoor({uid:`program-${data.id}`,category:"programs",title:data.title,meta:`${data.program} · ${data.date||""}`},false);renderProgramReportArchive();focusSavedProgramArchive(data.program);toast(fromApproval?`✓ تم اعتماد التقرير وحفظه فورًا داخل ملف «${data.program}»`:`تم تحديث تقرير «${data.program}» وحفظه`)}catch{data.photos=[];localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved));queueFileForNoor({uid:`program-${data.id}`,category:"programs",title:data.title,meta:`${data.program} · ${data.date||""}`},false);renderProgramReportArchive();focusSavedProgramArchive(data.program);toast("تم حفظ التقرير دون الصور لكبر مساحة التخزين، وتجهيزه لنظام نور")}
+    generateReport();const data=currentProgramReportData(),saved=savedProgramReports(),existing=saved.findIndex(report=>String(report.id)===String(data.id));if(existing>=0)saved[existing]=data;else saved.unshift(data);activeSavedProgramReportId=data.id;try{withAuthoritativePhotoWrite(()=>localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved)));queueFileForNoor({uid:`program-${data.id}`,category:"programs",title:data.title,meta:`${data.program} · ${data.date||""}`},false);renderProgramReportArchive();focusSavedProgramArchive(data.program);toast(fromApproval?`✓ تم اعتماد التقرير وحفظه فورًا داخل ملف «${data.program}»`:`تم تحديث تقرير «${data.program}» وحفظه`)}catch{data.photos=[];localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved));queueFileForNoor({uid:`program-${data.id}`,category:"programs",title:data.title,meta:`${data.program} · ${data.date||""}`},false);renderProgramReportArchive();focusSavedProgramArchive(data.program);toast("تم حفظ التقرير دون الصور لكبر مساحة التخزين، وتجهيزه لنظام نور")}
   }
   function focusSavedProgramArchive(program){requestAnimationFrame(()=>{const card=[...document.querySelectorAll(".program-archive-item")].find(item=>item.dataset.program===program);if(!card)return;card.classList.add("report-just-saved");card.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>card.classList.remove("report-just-saved"),3800)})}
   function queueCurrentProgramReportForNoor(){if(!reportApproved){toast("اعتمد التقرير أولًا");return}const data=currentProgramReportData();queueFileForNoor({uid:`program-${data.id}`,category:"programs",title:data.title,meta:`${data.program} · ${data.date||""}`})}
@@ -3918,7 +3918,91 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const intro=`السلام عليكم،\nنرفق لكم ملف «${data.title}» بصيغة PDF.\n${text}\n\nمع تحيات الموجّه الطلابي/ ${(appProfile||emptyProfile).counselor||""}`,source=document.querySelector("#reportPreview .professional-report");if(!source)return;sharePdfDocument({html:source.outerHTML,title:data.title,bodyClass:"print-program-report"},{text:intro,fallbackUrl:`https://wa.me/?text=${encodeURIComponent(intro)}`})
   }
 
-  function savedProgramReports(){try{return JSON.parse(localStorage.getItem("counselor_saved_program_reports")||"[]")}catch{return []}}
+  /* ========== Update 155: إخراج صور التقارير من localStorage نهائيًا ==========
+     السبب الجذري لكل مشاكل "الصور تختفي" و"امتلأت المساحة": متصفحك يمنح localStorage
+     ~5 ميجابايت فقط، وصور التوثيق وحدها تتجاوزها بسهولة. الحل الدائم: الصور تُحفظ في
+     IndexedDB (سعتها مئات الميجابايت) وفي السحابة، ولا يبقى في localStorage إلا النص.
+     التنفيذ باعتراض الكتابة في نقطة واحدة، فتبقى كل بقية الشيفرة تعمل كما هي:
+     الكاتب يمرّر التقارير بصورها كالمعتاد، ونحن نفصل الصور قبل الحفظ المحلي فقط —
+     أما النسخة المرسلة للسحابة فتبقى كاملة بصورها. */
+  const PROGRAM_REPORTS_KEY="counselor_saved_program_reports";
+  const reportPhotoCache=new Map();
+  let reportPhotoDbPromise=null,reportPhotoWriteAuthoritative=false;
+  // تُستخدم حول عمليات الحفظ الصادرة عن المستخدم مباشرة، حيث تكون قائمة الصور نهائية
+  // (فحذف كل الصور من تقرير يجب أن يُحذف فعلًا من التخزين المحلي).
+  function withAuthoritativePhotoWrite(fn){
+    reportPhotoWriteAuthoritative=true;
+    try{return fn()}finally{reportPhotoWriteAuthoritative=false}
+  }
+  function openReportPhotoDb(){
+    if(reportPhotoDbPromise)return reportPhotoDbPromise;
+    reportPhotoDbPromise=new Promise(resolve=>{
+      try{
+        if(!window.indexedDB)return resolve(null);
+        const request=indexedDB.open("counselor_report_photos",1);
+        request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("photos"))db.createObjectStore("photos")};
+        request.onsuccess=()=>resolve(request.result);
+        request.onerror=()=>resolve(null);
+        request.onblocked=()=>resolve(null);
+      }catch(e){resolve(null)}
+    });
+    return reportPhotoDbPromise;
+  }
+  async function persistReportPhotos(id,photos){
+    const db=await openReportPhotoDb();if(!db)return;
+    try{const store=db.transaction("photos","readwrite").objectStore("photos");
+      if(photos&&photos.length)store.put(photos,String(id));else store.delete(String(id))}catch(e){}
+  }
+  async function pruneReportPhotos(validIds){
+    const db=await openReportPhotoDb();if(!db)return;
+    try{const store=db.transaction("photos","readwrite").objectStore("photos"),keysReq=store.getAllKeys();
+      keysReq.onsuccess=()=>{(keysReq.result||[]).forEach(key=>{if(!validIds.has(String(key)))store.delete(key)})}}catch(e){}
+  }
+  function hydrateReportPhotos(){
+    return openReportPhotoDb().then(db=>db&&new Promise(resolve=>{
+      try{
+        const store=db.transaction("photos","readonly").objectStore("photos"),keysReq=store.getAllKeys(),valsReq=store.getAll();
+        let keys=null,vals=null;
+        const done=()=>{if(keys&&vals){keys.forEach((key,i)=>reportPhotoCache.set(String(key),vals[i]||[]));resolve(reportPhotoCache.size>0)}};
+        keysReq.onsuccess=()=>{keys=keysReq.result||[];done()};
+        valsReq.onsuccess=()=>{vals=valsReq.result||[];done()};
+        keysReq.onerror=valsReq.onerror=()=>resolve(false);
+      }catch(e){resolve(false)}
+    })).catch(()=>false);
+  }
+  (function installReportPhotoOffload(){
+    const native=localStorage.setItem.bind(localStorage);
+    localStorage.setItem=function(key,value){
+      if(key!==PROGRAM_REPORTS_KEY)return native(key,value);
+      let list=null;try{list=JSON.parse(value||"[]")}catch{}
+      if(!Array.isArray(list))return native(key,value);
+      const ids=new Set();
+      const textOnly=list.map(report=>{
+        if(!report||report.id==null)return report;
+        const id=String(report.id);ids.add(id);
+        const photos=Array.isArray(report.photos)?report.photos:[];
+        if(photos.length){reportPhotoCache.set(id,photos);persistReportPhotos(id,photos)}
+        // قائمة بلا صور لا تعني بالضرورة أن المستخدم حذفها: أغلب عمليات الحفظ تعيد كتابة
+        // النسخة النصية المخزّنة (وهي بلا صور أصلًا). لذلك لا نحذف الصور المحفوظة إلا عند
+        // حفظ صريح صادر عن شاشة التقرير/المهمة، وهو ما تحدده reportPhotoWriteAuthoritative.
+        else if(reportPhotoWriteAuthoritative&&!report.photosStoredInCloudOnly){reportPhotoCache.delete(id);persistReportPhotos(id,[])}
+        return {...report,photos:[]};
+      });
+      pruneReportPhotos(ids);
+      return native(key,JSON.stringify(textOnly));
+    };
+  })();
+  function savedProgramReports(){
+    try{
+      const list=JSON.parse(localStorage.getItem(PROGRAM_REPORTS_KEY)||"[]");
+      if(!Array.isArray(list))return [];
+      return list.map(report=>{
+        if(!report||report.id==null)return report;
+        const photos=reportPhotoCache.get(String(report.id));
+        return photos&&photos.length?{...report,photos}:report;
+      });
+    }catch{return []}
+  }
   function sortedProgramReports(program){return savedProgramReports().filter(r=>r.program===program).sort((a,b)=>String(a.date||"").localeCompare(String(b.date||""))||Number(a.id||0)-Number(b.id||0))}
   let programArchiveCoverOverrides=JSON.parse(localStorage.getItem("counselor_program_archive_covers")||"{}");
   function archiveCoverSettings(program){return programArchiveCoverOverrides[program]||{title:program,subtitle:"ملف تقارير البرنامج",note:""}}
@@ -3948,6 +4032,66 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
       if(freed>200*1024)toast?.(`تم تحرير ${formatBytes(freed)} من مساحة المتصفح بإزالة نسخ صور مكررة داخل المهام (الصور نفسها سليمة في تقاريرها)`);
     }catch(e){console.warn("تعذر تنظيف صور المهام المكررة",e)}
   }
+
+  // Update 155: استرجاع مساحة من بيانات قديمة لم تعد لها فائدة:
+  //  (أ) سجل الخطة الفصلية كان يحفظ 12 نسخة، كل واحدة تحمل نسخًا كاملة من المهام بصورها.
+  //  (ب) النسخة الاحتياطية من تحديث 114 — لم تعد لازمة بعد أن صارت التقارير محفوظة في السحابة،
+  //      ولا تُحذف إلا إذا كانت المزامنة نشطة فعلًا وهناك تقارير محفوظة (وإلا تُترك كما هي).
+  function reclaimLegacyStorage155(){
+    try{
+      if(localStorage.getItem("counselor_storage_reclaim_v155")==="1")return;
+      let freed=0;
+      const stripTaskPhotos=task=>task&&task.execution?{...task,execution:{...task.execution,photos:[]}}:task;
+      try{
+        const raw=localStorage.getItem("counselor_term_plan_history");
+        if(raw){
+          const history=JSON.parse(raw);
+          if(Array.isArray(history)&&history.length){
+            const slim=JSON.stringify(history.slice(0,6).map(s=>({...s,linkedTasks:(s.linkedTasks||[]).map(stripTaskPhotos)})));
+            if(slim.length<raw.length){freed+=raw.length-slim.length;localStorage.setItem("counselor_term_plan_history",slim)}
+          }
+        }
+      }catch(e){}
+      try{
+        const raw=localStorage.getItem("counselor_term_plan_previous");
+        if(raw){
+          const snapshot=JSON.parse(raw);
+          if(snapshot&&Array.isArray(snapshot.linkedTasks)){
+            const slim=JSON.stringify({...snapshot,linkedTasks:snapshot.linkedTasks.map(stripTaskPhotos)});
+            if(slim.length<raw.length){freed+=raw.length-slim.length;localStorage.setItem("counselor_term_plan_previous",slim)}
+          }
+        }
+      }catch(e){}
+      try{
+        const backup=localStorage.getItem("counselor_saved_program_reports_backup_update114");
+        const cloudActive=typeof window.cloudSignOut==="function";
+        const current=JSON.parse(localStorage.getItem("counselor_saved_program_reports")||"[]");
+        if(backup&&cloudActive&&Array.isArray(current)&&current.length){
+          freed+=backup.length;
+          localStorage.removeItem("counselor_saved_program_reports_backup_update114");
+        }
+      }catch(e){}
+      if(freed>0){
+        try{localStorage.setItem("counselor_storage_reclaim_v155","1")}catch(e){}
+        toast?.(`تم تحرير ${formatBytes(freed)} من مساحة المتصفح بإزالة نسخ قديمة لم تعد مستخدمة`);
+        try{renderStorageUsageMeter?.()}catch(e){}
+      }
+    }catch(e){console.warn("تعذر تحرير المساحة القديمة",e)}
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(reclaimLegacyStorage155,4000),{once:true});
+  else setTimeout(reclaimLegacyStorage155,4000);
+
+  // Update 155: تحميل الصور من IndexedDB عند الإقلاع ثم إعادة رسم الشاشات المعتمدة عليها
+  function bootReportPhotoCache155(){
+    hydrateReportPhotos().then(loaded=>{
+      if(!loaded)return;
+      ["renderProgramReportArchive","renderPrograms","renderTasks","renderPerformanceKpis"].forEach(name=>{
+        try{if(typeof window[name]==="function")window[name]()}catch(e){}
+      });
+    });
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bootReportPhotoCache155,{once:true});
+  else bootReportPhotoCache155();
 
   function renderStorageUsageMeter(){
     const el=document.getElementById("storageUsageMeter");if(!el)return;
@@ -4669,7 +4813,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
   }
   function upsertLinkedProgramReport(data){
     const saved=savedProgramReports(),index=saved.findIndex(r=>r.linkedTaskKey===data.linkedTaskKey);if(index>=0){data.id=saved[index].id||data.id;saved[index]=data}else saved.push(data);
-    try{localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved))}catch{data.photos=[];localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved));toast("حُفظ التقرير في ملف البرنامج دون الصور لكبر مساحة التخزين المحلية")}
+    try{withAuthoritativePhotoWrite(()=>localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved)))}catch{data.photos=[];localStorage.setItem("counselor_saved_program_reports",JSON.stringify(saved));toast("حُفظ التقرير في ملف البرنامج دون الصور لكبر مساحة التخزين المحلية")}
     renderProgramReportArchive();renderPrograms();return data;
   }
   function previewTaskLinkedReport(){
@@ -6241,7 +6385,19 @@ ${bullets}
     let original=[];try{original=JSON.parse(localStorage.getItem("counselor_saved_program_reports")||"[]")}catch{}
     try{localStorage.setItem("counselor_saved_program_reports_backup_update114",JSON.stringify(original));localStorage.setItem("counselor_saved_program_reports",JSON.stringify(canonicalizeReportList(original)));localStorage.setItem(UPDATE114_MIGRATION_KEY,new Date().toISOString())}catch(error){console.warn("تعذر توحيد التقارير القديمة",error)}
   }
-  savedProgramReports=function(){try{return canonicalizeReportList(JSON.parse(localStorage.getItem("counselor_saved_program_reports")||"[]"))}catch{return[]}}
+  // Update 155: هذا التجاوز كان يقرأ localStorage مباشرة، فيفقد الصور بعد نقلها إلى
+  // IndexedDB. نعيد دمجها من الذاكرة المؤقتة تمامًا كما تفعل النسخة الأصلية.
+  savedProgramReports=function(){
+    try{
+      const list=canonicalizeReportList(JSON.parse(localStorage.getItem(PROGRAM_REPORTS_KEY)||"[]"));
+      if(!Array.isArray(list))return [];
+      return list.map(report=>{
+        if(!report||report.id==null)return report;
+        const photos=reportPhotoCache.get(String(report.id));
+        return photos&&photos.length?{...report,photos}:report;
+      });
+    }catch{return []}
+  }
   function upsertCanonicalProgramReport(data){
     const saved=savedProgramReports(),key=reportCanonicalKey(data),index=saved.findIndex(report=>reportCanonicalKey(report)===key||String(report.id)===String(data.id));
     if(index>=0)saved[index]=mergeCanonicalReports(saved[index],data);else saved.unshift({...data,canonicalKey:key,updatedAt:new Date().toISOString()});
@@ -7054,7 +7210,9 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         // وصول أي إشعار مزامنة (حتى لو غير متعلق به إطلاقًا) — وهذا بالضبط ما كان
         // يجعل تقارير المستخدم "تختفي" أو "ترجع للنسخة القديمة" بعد قليل من حفظها.
         // الحل: ندمج بدل الاستبدال — نحافظ على أي تقرير محلي معلَّم ومو موجود بالسحابة.
-        let localList=[];try{localList=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
+        // Update 155: نقرأ عبر savedProgramReports حتى تُدمج الصور من IndexedDB،
+        // وإلا ظننا أن الجهاز لا يملك الصور فأعدنا تنزيلها من السحابة في كل مرة.
+        let localList=[];try{localList=typeof savedProgramReports==="function"?savedProgramReports():JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
         await attachExternalPhotos(list,localList); // Update 149: إعادة ربط الصور المخزّنة بمستندات منفصلة
         const cloudIds=new Set(list.map(r=>String(r.id)));
         // Update 150: لا نمحو تقريرًا محليًا لمجرد غيابه عن السحابة. نُبقيه إذا كان
@@ -7108,7 +7266,7 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         const [kvSnap,reportsSnap]=await Promise.all([getDocs(collection(db,"users",uid,"kv")),getDocs(reportsCol())]);
         kvSnap.forEach(d=>applyRemoteKv(d.id,d.data().value||""));
         const list=[];reportsSnap.forEach(d=>{const data=d.data();delete data.updatedAt;delete data.device;list.push(data)});
-        let localBefore=[];try{localBefore=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
+        let localBefore=[];try{localBefore=typeof savedProgramReports==="function"?savedProgramReports():JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
         await attachExternalPhotos(list,localBefore); // Update 149: إعادة ربط الصور عند أول سحب كامل لهذا الجهاز
         if(reportsSnap.size>0||kvSnap.size>0){
           writeReportsLocally(list);
