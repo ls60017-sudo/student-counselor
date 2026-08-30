@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=146,APP_UPDATE_DATE="29 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=147,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -3822,7 +3822,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const files=[...(event.target.files||[])].filter(f=>f.type.startsWith("image/")),remaining=4-reportPhotoData.length;if(!files.length)return;if(files.length>remaining)toast(`سيتم اختيار ${remaining} صور فقط لأن الحد الأقصى 4`);
     Promise.all(files.slice(0,remaining).map(compressReportImage)).then(images=>{reportPhotoData.push(...images);reportPhotoPositions.push(...images.map(()=>({x:50,y:50})));invalidateReportApproval();renderReportPhotoPicker();generateReport()});event.target.value="";
   }
-  function compressReportImage(file){return new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=900,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement("canvas");canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL("image/jpeg",.72))};img.onerror=()=>resolve(reader.result);img.src=reader.result};reader.readAsDataURL(file)})}
+  function compressReportImage(file){return new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=750,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement("canvas");canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL("image/jpeg",.6))};img.onerror=()=>resolve(reader.result);img.src=reader.result};reader.readAsDataURL(file)})}
   function removeReportPhoto(index){reportPhotoData.splice(index,1);reportPhotoPositions.splice(index,1);invalidateReportApproval();renderReportPhotoPicker();generateReport();toast("تم حذف الصورة ويمكنك اختيار صورة بديلة")}
   function startReportPhotoDrag(event,index){
     if(event.target.closest("button"))return;const frame=event.currentTarget,pos=reportPhotoPositions[index]||{x:50,y:50};frame.setPointerCapture?.(event.pointerId);reportPhotoDrag={index,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,originX:pos.x,originY:pos.y,frame};event.preventDefault()
@@ -4571,7 +4571,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const imported=JSON.parse(localStorage.getItem("counselor_imported_term_plan")||"null");if(imported?.weeks){imported.weeks=planBaseWeeks();imported.totalItems=imported.weeks.reduce((sum,week)=>sum+(week.items?.length||0),0);localStorage.setItem("counselor_imported_term_plan",JSON.stringify(imported))}saveExtendedData();save();const selected=taskProgramEditorSelectedMaterials.map(title=>resourceTitleChanges.find(change=>change.before===title)?.after||title).filter(title=>resources.some(resource=>resource.title===title));renderPrograms();renderProgramReportArchive();renderTasks();refreshTaskExecutionProgramContent(selected);taskExecutionDirty=true;updateTaskLinkedState();closeModal("taskProgramEditorModal");openModal("taskExecutionModal");requestAnimationFrame(()=>document.getElementById("executionFormFields")?.scrollIntoView({behavior:"smooth",block:"start"}));toast("✓ تم اعتماد تعديل البرنامج؛ أكمل الآن تعبئة استمارة التنفيذ")
   }
 
-  function compressExecutionImage(file){return new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=800,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement("canvas");canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL("image/jpeg",.64))};img.onerror=()=>resolve(reader.result);img.src=reader.result};reader.readAsDataURL(file)})}
+  function compressExecutionImage(file){return new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=700,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement("canvas");canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL("image/jpeg",.55))};img.onerror=()=>resolve(reader.result);img.src=reader.result};reader.readAsDataURL(file)})}
   function loadExecutionPhotos(event){
     const files=[...(event.target.files||[])].filter(file=>file.type.startsWith("image/")),remaining=4-executionPhotoData.length;if(!files.length)return;if(files.length>remaining)toast(`سيتم اختيار ${remaining} صور فقط لأن الحد الأقصى 4`);
     Promise.all(files.slice(0,remaining).map(compressExecutionImage)).then(images=>{executionPhotoData.push(...images);renderExecutionPhotoPicker();markTaskExecutionDirty()});event.target.value="";
@@ -6774,18 +6774,26 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       const oldIds=new Set(oldList.map(r=>String(r.id)));
       const newIds=new Set(newList.map(r=>String(r.id)));
       const ops=[];
+      let flagsChanged=false;
       newList.forEach(report=>{
         const id=String(report.id),before=oldList.find(r=>String(r.id)===id);
         if(JSON.stringify(before)===JSON.stringify(report))return;
         const payload={...report,updatedAt:serverTimestamp(),device:deviceId};
+        delete payload.cloudSyncSkipped;
         const size=byteSize(JSON.stringify(payload));
         if(size>MAX_REPORT_DOC_BYTES){
           toast?.(`تنبيه: تقرير «${report.title||report.program}» كبير جدًا (${Math.round(size/1024)} ك.ب) ولن يُزامن مع الجوال — قلّل عدد/جودة الصور فيه`);
+          // Update 147: نعلّم هذا التقرير محليًا بدل تجاهله بصمت — بدون هذه العلامة
+          // كان مستمع listenReports يمسحه من هذا الجهاز أول ما تصل أي إشعار مزامنة،
+          // لأن السحابة لا تعرف عنه شيئًا أصلًا. راجع تعليق listenReports أدناه.
+          if(!report.cloudSyncSkipped){report.cloudSyncSkipped=true;flagsChanged=true}
           return;
         }
+        if(report.cloudSyncSkipped){delete report.cloudSyncSkipped;flagsChanged=true}
         ops.push(setDoc(doc(reportsCol(),id),payload,{merge:false}));
       });
       oldIds.forEach(id=>{if(!newIds.has(id))ops.push(deleteDoc(doc(reportsCol(),id)))});
+      if(flagsChanged){try{nativeSetItem(REPORTS_KEY,JSON.stringify(newList))}catch(e){}}
       localStorage.setItem("__sync_reports_baseline",JSON.stringify(newList));
       await Promise.all(ops).catch(e=>console.warn("تعذر مزامنة بعض التقارير",e));
     }
@@ -6801,8 +6809,19 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         const docsSnap=await getDocs(reportsCol());
         const list=[];
         docsSnap.forEach(d=>{const data=d.data();delete data.updatedAt;delete data.device;list.push(data)});
-        writeReportsLocally(list);
-        localStorage.setItem("__sync_reports_baseline",JSON.stringify(list));
+        // Update 147: تقرير فيه صور كثيرة/كبيرة قد يتجاوز حد حجم مستند Firestore
+        // فيُستبعد من الرفع (pushReportsDiff) ويبقى محفوظًا في هذا الجهاز فقط،
+        // معلَّمًا بـ cloudSyncSkipped. قبل هذا الإصلاح كنا نستبدل كامل القائمة
+        // المحلية بما تُرجعه السحابة فقط، فيُمحى هذا التقرير الكبير فورًا بمجرد
+        // وصول أي إشعار مزامنة (حتى لو غير متعلق به إطلاقًا) — وهذا بالضبط ما كان
+        // يجعل تقارير المستخدم "تختفي" أو "ترجع للنسخة القديمة" بعد قليل من حفظها.
+        // الحل: ندمج بدل الاستبدال — نحافظ على أي تقرير محلي معلَّم ومو موجود بالسحابة.
+        let localList=[];try{localList=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
+        const cloudIds=new Set(list.map(r=>String(r.id)));
+        const preservedLocalOnly=localList.filter(r=>r&&r.cloudSyncSkipped&&!cloudIds.has(String(r.id)));
+        const merged=[...list,...preservedLocalOnly];
+        writeReportsLocally(merged);
+        localStorage.setItem("__sync_reports_baseline",JSON.stringify(merged));
         if(typeof renderProgramReportArchive==="function")renderProgramReportArchive();
       },err=>console.warn("reports listener error",err));
     }
