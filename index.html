@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=148,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=149,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6498,7 +6498,39 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
   ]);
   const MAX_REPORT_DOC_BYTES=900*1024; // هامش أمان تحت حد Firestore (1 ميجابايت للمستند)
 
+  // Update 149: صور التقارير لم تعد تُخزَّن داخل مستند التقرير نفسه، بل كل صورة في
+  // مستند مستقل داخل مجموعة reportPhotos (وتُقسَّم لأجزاء لو كانت ضخمة جدًا).
+  // السبب: حد Firestore هو 1 ميجابايت *للمستند الواحد*، وتقرير فيه 4 صور كان يتجاوزه
+  // بسهولة فلا يُرفع إطلاقًا — فتختفي صوره من أي جهاز/متصفح آخر. بعد هذا التقسيم صار
+  // الحد يُطبَّق على الصورة الواحدة (حجمها ~100 ك.ب بعد الضغط) بدل التقرير كامل،
+  // أي أن المشكلة انتهت عمليًا دون الحاجة لأي ترقية فوترة (Firebase Storage تتطلب
+  // خطة Blaze، وهي غير عملية لعناوين الفوترة السعودية لأنها تمر عبر موزّع معتمد).
+  const MAX_PHOTO_CHUNK_CHARS=700000; // ~700 ك.ب لكل جزء، بهامش أمان تحت حد المستند
+
   function byteSize(str){try{return new TextEncoder().encode(str||"").length}catch{return String(str||"").length}}
+
+  function splitPhotoChunks(src){
+    const str=String(src||""),chunks=[];
+    for(let i=0;i<str.length;i+=MAX_PHOTO_CHUNK_CHARS)chunks.push(str.slice(i,i+MAX_PHOTO_CHUNK_CHARS));
+    return chunks.length?chunks:[""];
+  }
+  // بصمة خفيفة لمجموعة الصور: تتغير لو تغيّر عددها أو ترتيبها أو حجم أو محتوى أي صورة،
+  // وتُستخدم لمعرفة هل تحتاج إعادة رفع/تنزيل الصور أصلًا — بدل مقارنة سلاسل ضخمة كل مرة.
+  // مهم: تُحسب بصمة مستقلة لكل صورة مع رقم ترتيبها وطولها (حتى يُكشف تبديل صورة بأخرى
+  // أو إعادة ترتيبها)، وتُؤخذ عيّنات كثيفة تكفي لتغطية السلاسل القصيرة حرفًا حرفًا،
+  // مع تضمين آخر 64 حرفًا دائمًا حتى لا يفوتنا تغيير في نهاية الصورة فقط.
+  function photosSignature(photos){
+    const list=Array.isArray(photos)?photos:[];
+    const parts=list.map((src,index)=>{
+      const s=String(src||"");
+      let h1=0x811c9dc5>>>0,h2=(index+1)>>>0;
+      const step=Math.max(1,Math.floor(s.length/512));
+      for(let i=0;i<s.length;i+=step){const c=s.charCodeAt(i);h1=((h1^c)*16777619)>>>0;h2=((h2*33)+c)>>>0}
+      for(let i=Math.max(0,s.length-64);i<s.length;i++){const c=s.charCodeAt(i);h1=((h1^c)*16777619)>>>0}
+      return `${index}-${s.length}-${h1.toString(36)}${h2.toString(36)}`;
+    });
+    return `${list.length}|${parts.join("|")}`;
+  }
 
   // ---- تطبيق قيمة قادمة من الجهاز الآخر على متغيرات التطبيق المحملة في الذاكرة ----
   const VAR_APPLY={
@@ -6736,6 +6768,39 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
 
     // ---------------- مزامنة التقارير (مجموعة فرعية، مستند لكل تقرير) ----------------
     function reportsCol(){return collection(db,"users",uid,"reports")}
+    // Update 149: مجموعة مستقلة لصور التقارير — مستند لكل جزء من كل صورة.
+    function reportPhotosCol(){return collection(db,"users",uid,"reportPhotos")}
+    function photoChunkId(reportId,photoIndex,chunkIndex){return `${reportId}__p${photoIndex}__c${chunkIndex}`}
+
+    // يعيد ربط الصور المخزّنة خارجيًا بتقاريرها بعد سحبها من السحابة.
+    // نستفيد من photoChunks المحفوظة داخل مستند التقرير لمعرفة معرّفات المستندات
+    // المطلوبة بالضبط (بدون استعلامات إضافية)، ومن photosSig لتفادي إعادة تنزيل صور
+    // موجودة أصلًا ومطابقة في هذا الجهاز.
+    async function attachExternalPhotos(list,localList){
+      const localById={};
+      (Array.isArray(localList)?localList:[]).forEach(r=>{if(r&&r.id!=null)localById[String(r.id)]=r});
+      const cleanup=report=>{delete report.photosExternal;delete report.photoChunks;delete report.photoCount;delete report.photosSig};
+      await Promise.all(list.map(async report=>{
+        if(!report||!report.photosExternal){if(report)cleanup(report);return}
+        const id=String(report.id),chunkCounts=Array.isArray(report.photoChunks)?report.photoChunks:[],sig=report.photosSig;
+        const cached=localById[id];
+        if(cached&&Array.isArray(cached.photos)&&cached.photos.length&&photosSignature(cached.photos)===sig){
+          report.photos=cached.photos;cleanup(report);return;
+        }
+        const photos=[];
+        for(let pi=0;pi<chunkCounts.length;pi++){
+          const parts=[];
+          for(let ci=0;ci<(Number(chunkCounts[pi])||0);ci++){
+            try{const snap=await getDoc(doc(reportPhotosCol(),photoChunkId(id,pi,ci)));parts.push(snap.exists()?String(snap.data().data||""):"")}
+            catch(e){console.warn("تعذر تحميل جزء صورة",e);parts.push("")}
+          }
+          photos.push(parts.join(""));
+        }
+        report.photos=photos.filter(Boolean);
+        cleanup(report);
+      }));
+      return list;
+    }
 
     function writeReportsLocally(list){
       // نسخة الجهاز المحلية من التقارير مجرد ذاكرة تخزين مؤقت للعرض السريع؛
@@ -6783,8 +6848,25 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
       newList.forEach(report=>{
         const id=String(report.id),before=oldList.find(r=>String(r.id)===id);
         if(JSON.stringify(before)===JSON.stringify(report))return;
-        const payload={...report,updatedAt:serverTimestamp(),device:deviceId};
+        // Update 149: نفصل الصور عن مستند التقرير ونرفعها كمستندات مستقلة، فيبقى
+        // مستند التقرير نصيًا صغيرًا لا يقترب من حد الميجابايت مهما كثرت الصور.
+        const photos=Array.isArray(report.photos)?report.photos:[];
+        const beforePhotos=Array.isArray(before?.photos)?before.photos:[];
+        const newSig=photosSignature(photos);
+        const payload={...report,photos:[],photosExternal:true,photoCount:photos.length,photoChunks:photos.map(src=>splitPhotoChunks(src).length),photosSig:newSig,updatedAt:serverTimestamp(),device:deviceId};
         delete payload.cloudSyncSkipped;
+        if(newSig!==photosSignature(beforePhotos)){
+          const wanted=new Set();
+          photos.forEach((src,pi)=>splitPhotoChunks(src).forEach((chunk,ci)=>{
+            const chunkId=photoChunkId(id,pi,ci);wanted.add(chunkId);
+            ops.push(setDoc(doc(reportPhotosCol(),chunkId),{reportId:id,photoIndex:pi,chunkIndex:ci,data:chunk,device:deviceId},{merge:false}));
+          }));
+          // حذف أجزاء صور قديمة لم تعد موجودة (صورة محذوفة أو صارت أقصر)
+          beforePhotos.forEach((src,pi)=>splitPhotoChunks(src).forEach((chunk,ci)=>{
+            const chunkId=photoChunkId(id,pi,ci);
+            if(!wanted.has(chunkId))ops.push(deleteDoc(doc(reportPhotosCol(),chunkId)));
+          }));
+        }
         const size=byteSize(JSON.stringify(payload));
         if(size>MAX_REPORT_DOC_BYTES){
           toast?.(`تنبيه: تقرير «${report.title||report.program}» كبير جدًا (${Math.round(size/1024)} ك.ب) ولن يُزامن مع الجوال — قلّل عدد/جودة الصور فيه`);
@@ -6797,7 +6879,13 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         if(report.cloudSyncSkipped){delete report.cloudSyncSkipped;flagsChanged=true}
         ops.push(setDoc(doc(reportsCol(),id),payload,{merge:false}));
       });
-      oldIds.forEach(id=>{if(!newIds.has(id))ops.push(deleteDoc(doc(reportsCol(),id)))});
+      oldIds.forEach(id=>{
+        if(newIds.has(id))return;
+        ops.push(deleteDoc(doc(reportsCol(),id)));
+        // Update 149: عند حذف تقرير نحذف أيضًا مستندات صوره حتى لا تبقى معلّقة بلا مالك
+        const removed=oldList.find(r=>String(r.id)===id),removedPhotos=Array.isArray(removed?.photos)?removed.photos:[];
+        removedPhotos.forEach((src,pi)=>splitPhotoChunks(src).forEach((chunk,ci)=>ops.push(deleteDoc(doc(reportPhotosCol(),photoChunkId(id,pi,ci))))));
+      });
       if(flagsChanged){try{nativeSetItem(REPORTS_KEY,JSON.stringify(newList))}catch(e){}}
       localStorage.setItem("__sync_reports_baseline",JSON.stringify(newList));
       await Promise.all(ops).catch(e=>console.warn("تعذر مزامنة بعض التقارير",e));
@@ -6822,6 +6910,7 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         // يجعل تقارير المستخدم "تختفي" أو "ترجع للنسخة القديمة" بعد قليل من حفظها.
         // الحل: ندمج بدل الاستبدال — نحافظ على أي تقرير محلي معلَّم ومو موجود بالسحابة.
         let localList=[];try{localList=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
+        await attachExternalPhotos(list,localList); // Update 149: إعادة ربط الصور المخزّنة بمستندات منفصلة
         const cloudIds=new Set(list.map(r=>String(r.id)));
         const preservedLocalOnly=localList.filter(r=>r&&r.cloudSyncSkipped&&!cloudIds.has(String(r.id)));
         const merged=[...list,...preservedLocalOnly];
@@ -6868,6 +6957,8 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
         const [kvSnap,reportsSnap]=await Promise.all([getDocs(collection(db,"users",uid,"kv")),getDocs(reportsCol())]);
         kvSnap.forEach(d=>applyRemoteKv(d.id,d.data().value||""));
         const list=[];reportsSnap.forEach(d=>{const data=d.data();delete data.updatedAt;delete data.device;list.push(data)});
+        let localBefore=[];try{localBefore=JSON.parse(localStorage.getItem(REPORTS_KEY)||"[]")}catch{}
+        await attachExternalPhotos(list,localBefore); // Update 149: إعادة ربط الصور عند أول سحب كامل لهذا الجهاز
         if(reportsSnap.size>0||kvSnap.size>0){
           writeReportsLocally(list);
           localStorage.setItem("__sync_reports_baseline",JSON.stringify(list));
