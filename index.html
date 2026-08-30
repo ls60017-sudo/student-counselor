@@ -1274,9 +1274,9 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 151 · 30 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 152 · 30 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
-      البيانات محفوظة محليًا داخل المتصفح للتجربة فقط.
+      بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
   </aside>
 
@@ -2610,7 +2610,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=151,APP_UPDATE_DATE="30 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=152,APP_UPDATE_DATE="30 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -3924,21 +3924,57 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
   function archiveCoverSettings(program){return programArchiveCoverOverrides[program]||{title:program,subtitle:"ملف تقارير البرنامج",note:""}}
   function approxByteSize(value){try{return new TextEncoder().encode(JSON.stringify(value)).length}catch{return String(JSON.stringify(value)||"").length}}
   function formatBytes(bytes){if(!bytes)return "0 بايت";if(bytes>1024*1024)return (bytes/(1024*1024)).toFixed(2)+" ميجابايت";if(bytes>1024)return Math.round(bytes/1024)+" كيلوبايت";return bytes+" بايت"}
+  // Update 152: تنظيف لمرة واحدة — المهام المعتمدة كانت تحتفظ بنسخة ثانية كاملة من صور
+  // التقرير داخل counselor_tasks، فيتضاعف استهلاك مساحة المتصفح المحدودة بلا فائدة.
+  // نزيل النسخة المكررة فقط بعد التأكد أن التقرير المرتبط موجود ويحمل صوره فعلًا.
+  function dedupeTaskExecutionPhotos152(){
+    try{
+      if(localStorage.getItem("counselor_task_photo_dedupe_v152")==="1")return;
+      if(typeof tasks==="undefined"||!Array.isArray(tasks))return;
+      const reports=savedProgramReports();
+      let freed=0,changed=false;
+      tasks.forEach(task=>{
+        const execution=task.execution;
+        if(!execution||!Array.isArray(execution.photos)||!execution.photos.length)return;
+        if(execution.status!=="approved"||!execution.reportId)return;
+        const linked=reports.find(r=>String(r.id)===String(execution.reportId));
+        if(!linked||!Array.isArray(linked.photos)||!linked.photos.length)return;
+        freed+=execution.photos.reduce((sum,src)=>sum+String(src||"").length,0);
+        task.execution={...execution,photos:[],photosFromReport:true};
+        changed=true;
+      });
+      if(changed){save();renderTasks?.()}
+      localStorage.setItem("counselor_task_photo_dedupe_v152","1");
+      if(freed>200*1024)toast?.(`تم تحرير ${formatBytes(freed)} من مساحة المتصفح بإزالة نسخ صور مكررة داخل المهام (الصور نفسها سليمة في تقاريرها)`);
+    }catch(e){console.warn("تعذر تنظيف صور المهام المكررة",e)}
+  }
+
   function renderStorageUsageMeter(){
     const el=document.getElementById("storageUsageMeter");if(!el)return;
     let totalBytes=0,reportsBytes=0;
+    const keySizes=[];
     try{
       for(let i=0;i<localStorage.length;i++){
         const key=localStorage.key(i),value=localStorage.getItem(key)||"";
         const size=new TextEncoder().encode(key+value).length;
         totalBytes+=size;
+        keySizes.push([key,size]);
         if(key==="counselor_saved_program_reports")reportsBytes=size;
       }
     }catch{}
+    // Update 152: تفصيل أكبر العناصر استهلاكًا للمساحة — يساعد على معرفة سبب الامتلاء مباشرة
+    const KEY_LABELS={
+      counselor_saved_program_reports:"تقارير البرامج",counselor_tasks:"المهام",
+      counselor_students:"بيانات الطلاب",counselor_student_counselor_forms:"نماذج التوجيه الطلابي",
+      counselor_imported_term_plan:"الخطة الفصلية المستوردة",counselor_program_archive_covers:"أغلفة ملفات البرامج",
+      counselor_editable_programs:"البرامج القابلة للتعديل",__sync_reports_baseline:"نسخة مرجعية للمزامنة"
+    };
+    const topKeys=keySizes.sort((a,b)=>b[1]-a[1]).filter(([,size])=>size>20*1024).slice(0,5);
+    const breakdown=topKeys.length?`<div class="storage-meter-row" style="flex-direction:column;align-items:stretch;gap:3px"><small><b>أكبر العناصر استهلاكًا:</b></small>${topKeys.map(([key,size])=>`<small style="display:flex;justify-content:space-between"><span>${escapeHTML(KEY_LABELS[key]||key)}</span><span>${formatBytes(size)}</span></small>`).join("")}</div>`:"";
     const REFERENCE=5*1024*1024,percent=Math.min(100,Math.round(totalBytes/REFERENCE*100)),barColor=percent>90?"#dc2626":percent>70?"#d97706":"#0f8c72";
     const cloudActive=typeof window.cloudSignOut==="function";
     const cloudNote=cloudActive?`<div class="storage-meter-row"><small>☁ بياناتك متزامنة مع السحابة (خطة مجانية بسعة ~1 جيجابايت) — حتى لو امتلأت هذه الخانة، تبقى بياناتك وصورك محفوظة بأمان ويمكن الوصول لها من جهازك الآخر</small></div>`:`<div class="storage-meter-row"><small>هذه الخانة تقيس تخزين هذا المتصفح فقط. فعّل المزامنة السحابية لرفع السعة الفعلية إلى ~1 جيجابايت وربط جوالك بجهازك</small></div>`;
-    el.innerHTML=`<div class="storage-meter-row"><b>مساحة تخزين هذا المتصفح (نسخة محلية سريعة)</b><span>${formatBytes(totalBytes)} من أصل ~5 ميجابايت تقريبًا (بعض المتصفحات مثل Chrome تسمح حتى 10 ميجا)</span></div><div class="storage-meter-bar"><div class="storage-meter-fill" style="width:${percent}%;background:${barColor}"></div></div><div class="storage-meter-row"><small>تقارير البرامج المحفوظة: ${formatBytes(reportsBytes)}</small><small>باقي بيانات التطبيق: ${formatBytes(totalBytes-reportsBytes)}</small></div>${cloudNote}`;
+    el.innerHTML=`<div class="storage-meter-row"><b>مساحة تخزين هذا المتصفح (نسخة محلية سريعة)</b><span>${formatBytes(totalBytes)} من أصل ~5 ميجابايت تقريبًا (بعض المتصفحات مثل Chrome تسمح حتى 10 ميجا)</span></div><div class="storage-meter-bar"><div class="storage-meter-fill" style="width:${percent}%;background:${barColor}"></div></div><div class="storage-meter-row"><small>تقارير البرامج المحفوظة: ${formatBytes(reportsBytes)}</small><small>باقي بيانات التطبيق: ${formatBytes(totalBytes-reportsBytes)}</small></div>${breakdown}${cloudNote}`;
   }
   function renderProgramReportArchive(){
     const wrap=document.getElementById("programReportArchive");if(!wrap)return;const saved=savedProgramReports(),groups={};editablePrograms.forEach((p,i)=>groups[p.name]={program:p,index:i,reports:[]});saved.forEach(r=>{groups[r.program]??={program:{name:r.program},index:0,reports:[]};groups[r.program].reports.push(r)});
@@ -4549,7 +4585,13 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     document.querySelectorAll('input[name="venue"]').forEach(input=>input.checked=execution.venue?input.value===execution.venue:input.value==="الفصل");
     document.querySelectorAll('input[name="target"]').forEach(input=>input.checked=(execution.targets||[]).includes(input.value));
     document.querySelectorAll('input[name="distribution"]').forEach(input=>input.checked=(execution.distribution||[]).includes(input.value));
-    executionPhotoData=[...(execution.photos||[])];renderExecutionPhotoPicker();
+    // Update 152: المهمة المعتمدة لا تخزّن صورها (التقرير يحملها) — نقرأها من التقرير المرتبط
+    let restoredPhotos=execution.photos||[];
+    if(execution.photosFromReport&&!restoredPhotos.length&&execution.reportId){
+      const linked=savedProgramReports().find(r=>String(r.id)===String(execution.reportId));
+      if(linked&&Array.isArray(linked.photos))restoredPhotos=linked.photos;
+    }
+    executionPhotoData=[...restoredPhotos];renderExecutionPhotoPicker();
     document.getElementById("executionCompletedNotice")?.classList.toggle("show",Boolean(t.done));
     taskExecutionDirty=false;updateTaskLinkedState();
     openModal("taskExecutionModal");
@@ -4634,7 +4676,11 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const context=syncTaskToReportBuilder();if(!context)return;const source=document.querySelector("#reportPreview .professional-report"),target=document.getElementById("taskReportPreviewContent");if(!source||!target)return;target.innerHTML="";target.appendChild(source.cloneNode(true));updateTaskLinkedState();openModal("taskReportPreviewModal");toast("هذه معاينة مباشرة للتقرير قبل الاعتماد")
   }
   function approveTaskLinkedReport(){
-    const context=syncTaskToReportBuilder();if(!context)return;setReportApprovalState(true);generateReport(true);const savedReport=upsertLinkedProgramReport(linkedTaskReportData(context));context.t.done=true;context.t.execution={...context.data,photoPositions:savedReport.photoPositions||context.data.photoPositions,status:"approved",approvedAt:new Date().toISOString(),reportId:savedReport.id,linkedTaskKey:savedReport.linkedTaskKey,program:savedReport.program};taskExecutionDirty=false;
+    const context=syncTaskToReportBuilder();if(!context)return;setReportApprovalState(true);generateReport(true);const savedReport=upsertLinkedProgramReport(linkedTaskReportData(context));context.t.done=true;
+    // Update 152: لا نحتفظ بنسخة ثانية من الصور داخل المهمة — التقرير المعتمد يحملها أصلًا.
+    // كان هذا التكرار يضاعف استهلاك مساحة المتصفح المحدودة (~5 ميجا) ويعجّل امتلاءها،
+    // وهو ما كان يشغّل كود الطوارئ الذي يمسح الصور. تُقرأ الصور من التقرير عند فتح المهمة.
+    context.t.execution={...context.data,photos:[],photosFromReport:true,photoPositions:savedReport.photoPositions||context.data.photoPositions,status:"approved",approvedAt:new Date().toISOString(),reportId:savedReport.id,linkedTaskKey:savedReport.linkedTaskKey,program:savedReport.program};taskExecutionDirty=false;
     queueFileForNoor({uid:`program-${savedReport.id}`,category:"programs",title:savedReport.title,meta:`${savedReport.program} · ${savedReport.date||""}`},false);
     try{save()}catch{context.t.execution.photos=[];executionPhotoData=[];save();renderExecutionPhotoPicker();toast("تم الاعتماد وحفظ التقرير، وتعذر حفظ نسخة الصور داخل المهمة محليًا")}
     renderTasks();renderTermPlan();updateTaskLinkedState();const source=document.querySelector("#reportPreview .professional-report"),target=document.getElementById("taskReportPreviewContent");if(source&&target){target.innerHTML="";target.appendChild(source.cloneNode(true))}toast(`✓ اكتملت المهمة تلقائيًا وحُفظت داخل ملف «${savedReport.program}»`)
@@ -6592,6 +6638,10 @@ window.__FIREBASE_CONFIG__=window.__FIREBASE_CONFIG__||{
     // أي مفتاح غير مذكور هنا (مثل term_plan_history/previous أو الإعدادات النصية البسيطة)
     // تُحدَّث قيمته في localStorage فقط، وتُقرأ مباشرة عند الحاجة لاحقًا.
   };
+
+  // Update 152: يُشغَّل التنظيف مرة واحدة بعد اكتمال تحميل التطبيق وبياناته
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(dedupeTaskExecutionPhotos152,2500),{once:true});
+  else setTimeout(dedupeTaskExecutionPhotos152,2500);
 
   function refreshAllViews(){
     const fns=["renderNotificationCenter","renderDailyHero","renderTermPlan","renderTasks","renderStudents",
