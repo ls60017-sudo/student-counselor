@@ -1306,7 +1306,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 166 · 31 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 167 · 31 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2642,7 +2642,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=166,APP_UPDATE_DATE="31 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=167,APP_UPDATE_DATE="31 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -3899,7 +3899,15 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const stateEl=document.getElementById("reportApprovalState");
     if(stateEl){stateEl.classList.add("show");stateEl.classList.toggle("pending",!approved);stateEl.textContent=approved?"تم اعتماد النسخة الحالية":pendingHint}
   }
-  function invalidateReportApproval(){if(reportApproved)setReportApprovalState(false)}
+  /* Update 167: إبطال الاعتماد كان يقع أيضًا عند إعادة الرسم البرمجية (updateReportAudienceControls
+     تُستدعى ضمن سلسلة الحفظ بعد الاعتماد مباشرة)، فيعود التقرير «غير معتمد» فورًا رغم ظهور رسالة
+     الاعتماد — وتبقى الطباعة والحفظ معطّلة. الآن لا يُبطَل الاعتماد إلا بتعديل صادر عن المستخدم. */
+  let suppressApprovalInvalidation=false;
+  function invalidateReportApproval(){if(suppressApprovalInvalidation)return;if(reportApproved)setReportApprovalState(false)}
+  function withoutApprovalInvalidation(fn){
+    const previous=suppressApprovalInvalidation;suppressApprovalInvalidation=true;
+    try{return fn()}finally{suppressApprovalInvalidation=previous}
+  }
   function previewProgramReport(){generateReport();document.querySelector("#reports .report-builder")?.classList.add("preview-mode");requestAnimationFrame(()=>document.getElementById("reportPreview")?.scrollIntoView({behavior:"smooth",block:"start"}));toast("تم فتح ورقة التقرير كاملة للمعاينة قبل الاعتماد")}
   function editProgramReport(){document.querySelector("#reports .report-builder")?.classList.remove("preview-mode");setReportApprovalState(false);requestAnimationFrame(()=>document.getElementById("programReportBuilder")?.scrollIntoView({behavior:"smooth",block:"start"}));toast("يمكنك الآن تعديل جميع بيانات التقرير")}
   function approveProgramReport(){generateReport();const program=editablePrograms[Number(document.getElementById("reportProgram").value||0)];if(isStudentCouncilProgram(program)&&!savedProgramReports().some(report=>report.program===program.name)&&!selectedStudentCouncilMembers().length){toast("حدد أعضاء المجلس الطلابي في التقرير الأول قبل الاعتماد");return}document.querySelector("#reports .report-builder")?.classList.add("preview-mode");setReportApprovalState(true);saveProgramReport(true)}
@@ -6725,8 +6733,12 @@ ${bullets}
   function reportCanonicalText(value){return normalizeSearchText(String(value||"")).replace(/\s+/g," ").trim()}
   function reportCanonicalKey(report={}){return report.linkedTaskKey?`task:${report.linkedTaskKey}`:`report:${reportCanonicalText(report.program)}|${reportCanonicalText(report.title||report.program)}|${String(report.date||"").slice(0,10)}`}
   function reportSavedTime(report={}){return Date.parse(report.updatedAt||report.approvedAt||report.savedAt||report.date||0)||Number(report.id)||0}
-  function mergeCanonicalReports(left,right){
-    const ordered=[left,right].sort((a,b)=>reportSavedTime(a)-reportSavedTime(b)),latest=ordered[1]||ordered[0]||{},oldest=ordered[0]||{};
+  /* Update 167: كان الدمج يرتّب النسختين بالوقت فقط. والتعديل الجديد القادم من الاستمارة
+     لا يحمل updatedAt، فيُحسب «أقدم» من النسخة المحفوظة فتفوز القديمة ويضيع تعديل المستخدم.
+     الصحيح: النسخة القادمة من المحرِّر (right) هي الأحدث دائمًا. */
+  function mergeCanonicalReports(left,right,incomingIsLatest=true){
+    const ordered=incomingIsLatest?[left,right]:[left,right].sort((a,b)=>reportSavedTime(a)-reportSavedTime(b));
+    const latest=ordered[1]||ordered[0]||{},oldest=ordered[0]||{};
     const photoRows=[];[oldest,latest].forEach(report=>(report.photos||[]).forEach((photo,index)=>{if(photo&&!photoRows.some(row=>row.photo===photo))photoRows.push({photo,position:(report.photoPositions||[])[index]||{x:50,y:50}})}));
     return {...oldest,...latest,id:oldest.id||latest.id||Date.now(),canonicalKey:reportCanonicalKey(latest),photos:photoRows.slice(0,4).map(row=>row.photo),photoPositions:photoRows.slice(0,4).map(row=>row.position),updatedAt:latest.updatedAt||latest.approvedAt||new Date().toISOString(),approved:Boolean(oldest.approved||latest.approved)}
   }
@@ -6751,7 +6763,7 @@ ${bullets}
   }
   function upsertCanonicalProgramReport(data){
     const saved=savedProgramReports(),key=reportCanonicalKey(data),index=saved.findIndex(report=>reportCanonicalKey(report)===key||String(report.id)===String(data.id));
-    if(index>=0)saved[index]=mergeCanonicalReports(saved[index],data);else saved.unshift({...data,canonicalKey:key,updatedAt:new Date().toISOString()});
+    if(index>=0)saved[index]=mergeCanonicalReports(saved[index],data,true);else saved.unshift({...data,canonicalKey:key,updatedAt:new Date().toISOString()});
     let canonical=canonicalizeReportList(saved);
     try{
       localStorage.setItem("counselor_saved_program_reports",JSON.stringify(canonical));
@@ -6769,10 +6781,12 @@ ${bullets}
     return canonical.find(report=>reportCanonicalKey(report)===key)||data
   }
   saveProgramReport=function(fromApproval=false){
+    return withoutApprovalInvalidation(()=>{
     generateReport();const data=currentProgramReportData(),saved=upsertCanonicalProgramReport(data);activeSavedProgramReportId=saved.id;
     queueFileForNoor({uid:`program-${saved.id}`,category:"programs",title:saved.title,meta:`${saved.program} · ${saved.date||""}`},false);
     renderProgramReportArchive();focusSavedProgramArchive(saved.program);renderPrograms();renderPerformanceKpis();renderExternalEvaluation();renderMonthlyReports();renderNotificationCenter();
-    toast(fromApproval?`✓ تم اعتماد التقرير وربطه بالخطة وملف الإنجاز والتقويم الخارجي`:`تم تحديث التقرير الموحد «${saved.title||saved.program}»`);return saved
+    toast(fromApproval?`✓ تم اعتماد التقرير وربطه بالخطة وملف الإنجاز والتقويم الخارجي`:`تم تحديث التقرير الموحد «${saved.title||saved.program}»`);return saved;
+    });
   }
   upsertLinkedProgramReport=function(data){return upsertCanonicalProgramReport(data)}
   deleteSavedProgramReport=function(id,program){
