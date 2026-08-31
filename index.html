@@ -1297,7 +1297,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 162 · 31 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 163 · 31 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2633,7 +2633,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=162,APP_UPDATE_DATE="31 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=163,APP_UPDATE_DATE="31 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6247,6 +6247,18 @@ ${bullets}
     try{const raw=record?.fields?.councilRoles;return raw?JSON.parse(raw):{}}catch{return {}}
   }
   function councilDefaultRole(index){return COUNCIL_ROLE_OPTIONS[index]||"عضو"}
+  /* Update 163: السجلات المحفوظة قبل هذا التغيير قد تحمل عضوية «الرئيس» لأحد الطلاب.
+     بما أن الرئاسة صارت للموجّه الطلابي، نُطبّع أي عضوية طالب قديمة حتى لا يظهر رئيسان:
+     أول طالب يصبح نائب الرئيس (إن لم يكن هناك نائب)، وغيره يصبح عضوًا. */
+  function councilNormalizedRole(name,index,roles){
+    const saved=roles&&roles[name];
+    if(saved&&saved!=="الرئيس")return saved;
+    if(saved==="الرئيس"){
+      const hasDeputy=Object.entries(roles||{}).some(([key,value])=>key!==name&&value==="نائب الرئيس");
+      return hasDeputy?"عضو":"نائب الرئيس";
+    }
+    return councilDefaultRole(index);
+  }
   function councilStudentGrade(name){
     const student=students.find(item=>normalizeStudentLookup(item.name)===normalizeStudentLookup(name));
     return student?.classroom||student?.className||student?.grade||student?.class||"";
@@ -6266,7 +6278,7 @@ ${bullets}
         <span class="council-role-grade">—</span>
         <span class="council-role-fixed">الرئيس</span></div>`;
     const rows=presidentRow+names.map((name,index)=>{
-      const role=saved[name]||councilDefaultRole(index);
+      const role=councilNormalizedRole(name,index,saved);
       const grade=councilStudentGrade(name);
       return `<div class="council-role-row"><span class="council-role-index">${index+2}</span>
         <span class="council-role-name">${escapeHTML(name)}</span>
@@ -6598,7 +6610,7 @@ ${bullets}
     // رئيس المجلس هو الموجّه الطلابي دائمًا، ثم يليه الطلاب بعضوياتهم
     const presidentRow=`<tr class="council-president-row"><td>1</td><td>${escapeHTML(councilPresidentName())}</td><td>—</td><td>الرئيس</td><td class="council-sign-cell"></td></tr>`;
     const rows=presidentRow+(names.length?names.map((name,index)=>{
-      const role=roles[name]||councilDefaultRole(index);
+      const role=councilNormalizedRole(name,index,roles);
       return `<tr><td>${index+2}</td><td>${escapeHTML(name)}</td><td>${escapeHTML(councilStudentGrade(name)||"")}</td><td>${escapeHTML(role)}</td><td class="council-sign-cell"></td></tr>`;
     }).join(""):`<tr><td colspan="5" class="council-empty-cell">لم يتم اختيار الأعضاء الطلاب بعد</td></tr>`);
     const f=record?.fields||{};
