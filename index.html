@@ -4921,8 +4921,9 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     try{if(isStudentCouncilProgram(program||{name:info.name})){
       try{renderStudentCouncilMembers()}catch(e){}
       const agendaField=document.getElementById("councilAgenda"),recField=document.getElementById("councilRecommendations");
-      if(agendaField&&(data.councilAgenda||!agendaField.value.trim()))agendaField.value=data.councilAgenda||"";
-      if(recField&&(data.councilRecommendations||!recField.value.trim()))recField.value=data.councilRecommendations||"";
+      // الكتابة دائمًا من بيانات المهمة (حتى لو فارغة) حتى لا يتسرّب نص تقرير آخر بقي في النموذج
+      if(agendaField)agendaField.value=data.councilAgenda||"";
+      if(recField)recField.value=data.councilRecommendations||"";
     }}catch(e){}
     setReportApprovalState(false);generateReport(true);return{t,info,data,programIndex,program};
   }
