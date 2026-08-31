@@ -785,6 +785,8 @@ body.print-external-evaluation #externalEvaluationPrintRoot *{visibility:visible
     .council-exec-facts>div{border:1px solid #c9d3de;border-radius:2mm;padding:2mm;text-align:center}
     .council-exec-facts small{display:block;color:#6b7686;font-size:7.5px;margin-bottom:1mm}
     .council-exec-facts b{font-size:9px;color:#2b3648}
+    .council-ordered-list{margin:0;padding-inline-start:5mm;display:grid;gap:1.2mm;font-size:9px;line-height:1.7}
+    .council-ordered-list li{padding-inline-start:1mm}
     .council-doc-panel{grid-column:1/-1;display:grid;gap:3mm}
     .council-approval-table,.council-members-table{width:100%;border-collapse:collapse;font-size:9px}
     .council-approval-table th,.council-approval-table td,.council-members-table th,.council-members-table td{border:1px solid #c9d3de;padding:2mm 2.5mm;text-align:center}
@@ -1304,7 +1306,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 164 · 31 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 165 · 31 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -1618,7 +1620,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
             <div id="reportAudienceField" class="form-field full"><label id="reportAudienceLabel">الفئة المستهدفة — يمكن اختيار أكثر من فئة</label><div class="report-audience-choices"><label><input type="checkbox" name="reportAudienceChoice" value="طلاب" onchange="updateReportAudienceControls()"><span class="audience-option-text">طلاب</span></label><label><input type="checkbox" name="reportAudienceChoice" value="أولياء أمور" onchange="updateReportAudienceControls()"><span class="audience-option-text">أولياء أمور</span></label><label><input type="checkbox" name="reportAudienceChoice" value="معلمين" onchange="updateReportAudienceControls()"><span class="audience-option-text">معلمين</span></label><label><input type="checkbox" name="reportAudienceChoice" value="أخرى" onchange="updateReportAudienceControls()"><span class="audience-option-text">أخرى</span></label></div><small id="reportAudiencePolicyNote" class="muted"></small><div id="reportStudentScope" class="report-student-scope" hidden><select id="reportStudentScopeMode" class="select" aria-label="نطاق الطلاب" onchange="updateReportAudienceControls()"><option value="all">كل المدرسة</option><option value="class">فصل محدد</option></select><select id="reportAudienceGrade" class="select" aria-label="الصف" title="اختر الصف" onchange="updateReportAudienceControls()"></select><select id="reportAudienceClass" class="select" aria-label="الشعبة" title="اختر حرف أو رقم الشعبة" onchange="updateReportAudienceControls()"></select></div><input id="reportAudienceOther" class="input report-audience-other" hidden placeholder="اكتب الفئة الأخرى"></div>
             <div id="reportBeneficiariesField" class="form-field"><label>عدد المشاركين</label><input id="reportBeneficiaries" class="input" type="number" min="0" placeholder="0"></div>
             <div class="form-field full"><label>التنفيذ <span class="suggested-field-label">مقترح قابل للتعديل</span> <small class="muted">مختصر لضمان صفحة A4 واحدة</small></label><textarea id="reportDescription" class="textarea" rows="4" maxlength="520" placeholder="اكتب وصفًا موجزًا لما تم تنفيذه..."></textarea></div>
-            <div id="councilExecInfoPanel" class="council-exec-panel" hidden><div class="student-extra-title"><b>معلومات تنفيذ البرنامج</b><small>حقول النموذج الرسمي لبرنامج المجلس الطلابي.</small></div><div class="form-grid"><div class="form-field"><label>الأسبوع</label><input id="councilExecWeek" class="input" placeholder="مثال: الرابع"></div><div class="form-field"><label>المرحلة</label><input id="councilExecStage" class="input" placeholder="مثال: الابتدائية"></div><div class="form-field"><label>المنفّذ</label><input id="councilExecOwner" class="input" placeholder="اسم المنفّذ"></div><div class="form-field"><label>الجهات المساندة</label><input id="councilExecSupport" class="input" placeholder="مثال: رائد النشاط · أ. فلان"></div></div></div><div id="studentCouncilMembersPanel" class="council-members-panel" hidden><div class="student-extra-title"><b>أعضاء المجلس الطلابي</b><small>في التقرير الأول حدد الطلاب المسجلين في المجلس، وسيحفظون مع ملف البرنامج.</small></div><div id="studentCouncilMembersGrid" class="council-members-grid"></div></div>
+            <div id="councilExecInfoPanel" class="council-exec-panel" hidden><div class="student-extra-title"><b>معلومات تنفيذ البرنامج</b><small>حقول النموذج الرسمي لبرنامج المجلس الطلابي.</small></div><div class="form-grid"><div class="form-field"><label>الأسبوع</label><input id="councilExecWeek" class="input" placeholder="مثال: الرابع"></div><div class="form-field"><label>المرحلة</label><input id="councilExecStage" class="input" placeholder="مثال: الابتدائية"></div><div class="form-field"><label>المنفّذ</label><input id="councilExecOwner" class="input" placeholder="اسم المنفّذ"></div><div class="form-field"><label>الجهات المساندة</label><input id="councilExecSupport" class="input" placeholder="مثال: رائد النشاط · أ. فلان"></div><div class="form-field full"><label>بنود الاجتماع</label><textarea id="councilAgenda" class="textarea" rows="4" placeholder="اكتب كل بند في سطر مستقل"></textarea></div><div class="form-field full"><label>التوصيات</label><textarea id="councilRecommendations" class="textarea" rows="4" placeholder="اكتب كل توصية في سطر مستقل"></textarea></div></div><small>أعضاء المجلس المعتمدون يُدرجون تلقائيًا في التقرير من سجل «أعضاء المجلس الطلابي».</small></div><div id="studentCouncilMembersPanel" class="council-members-panel" hidden><div class="student-extra-title"><b>أعضاء المجلس الطلابي</b><small>في التقرير الأول حدد الطلاب المسجلين في المجلس، وسيحفظون مع ملف البرنامج.</small></div><div id="studentCouncilMembersGrid" class="council-members-grid"></div></div>
             <div id="reportSourceTypeField" class="form-field"><label>نوع المصدر</label><select id="reportSourceType" class="select" onchange="detectSourceProvider(true)"><option>رابط فيديو</option><option>ملف Google Drive</option><option>فيديو Google Drive</option><option>مصدر خارجي</option><option>مادة إثرائية</option><option>نموذج أو استبانة</option></select></div>
             <div id="reportSourceTitleField" class="form-field"><label>اسم الملف أو المصدر</label><input id="reportSourceTitle" class="input" oninput="this.dataset.autoSourceName='false';invalidateReportApproval()" placeholder="يُجهز تلقائيًا ويمكنك تعديله"></div>
             <div id="reportSourceUrlField" class="form-field full"><label>رابط الفيديو أو المصدر</label><input id="reportSourceUrl" class="input" type="url" oninput="detectSourceProvider()" placeholder="ألصق رابط Google Drive أو YouTube أو أي مصدر خارجي"><div style="display:flex;align-items:center;gap:8px;margin-top:7px"><button class="smart-mini-btn" type="button" onclick="window.open('https://drive.google.com/drive/my-drive','_blank','noopener')">فتح Google Drive</button><small class="muted">لن يظهر الرابط الطويل في التقرير؛ سيظهر اسم الملف مع رمز QR قابل للضغط والمسح.</small></div><div id="reportSourceResolvedName" class="source-resolved-name" hidden><span>QR</span><div><b id="reportSourceResolvedTitle"></b><small id="reportSourceResolvedMeta"></small></div></div></div>
@@ -2640,7 +2642,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=164,APP_UPDATE_DATE="31 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=165,APP_UPDATE_DATE="31 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -3941,7 +3943,9 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
       week:document.getElementById("councilExecWeek")?.value.trim()||"",
       stage:document.getElementById("councilExecStage")?.value.trim()||"",
       owner:document.getElementById("councilExecOwner")?.value.trim()||"",
-      support:document.getElementById("councilExecSupport")?.value.trim()||""}:null,councilMembers:isStudentCouncilProgram(p)?selectedStudentCouncilMembers():[],councilMemberIds:isStudentCouncilProgram(p)?selectedStudentCouncilMemberIds():[],sourceType,sourceTitle:specialCare?"":sourceInfo.name,sourceKind:specialCare?"":sourceInfo.kind,sourceUrl,sourceNote:specialCare?"":document.getElementById("reportSourceNote").value,photos:[...reportPhotoData],photoPositions:reportPhotoPositions.map(pos=>({...pos})),photoCount:reportPhotoCount,profile:{...(appProfile||emptyProfile)},approved:true,savedAt:new Date().toLocaleString("ar-SA-u-nu-latn")};
+      support:document.getElementById("councilExecSupport")?.value.trim()||"",
+      agenda:document.getElementById("councilAgenda")?.value.trim()||"",
+      recommendations:document.getElementById("councilRecommendations")?.value.trim()||""}:null,councilMembers:isStudentCouncilProgram(p)?selectedStudentCouncilMembers():[],councilMemberIds:isStudentCouncilProgram(p)?selectedStudentCouncilMemberIds():[],sourceType,sourceTitle:specialCare?"":sourceInfo.name,sourceKind:specialCare?"":sourceInfo.kind,sourceUrl,sourceNote:specialCare?"":document.getElementById("reportSourceNote").value,photos:[...reportPhotoData],photoPositions:reportPhotoPositions.map(pos=>({...pos})),photoCount:reportPhotoCount,profile:{...(appProfile||emptyProfile)},approved:true,savedAt:new Date().toLocaleString("ar-SA-u-nu-latn")};
   }
   function saveProgramReport(fromApproval=false){
     if(!reportApproved){toast("عاين التقرير ثم اضغط اعتماد قبل الحفظ");return}
@@ -4213,7 +4217,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     {const exec=report.councilExec||{};
      const set=(id,value)=>{const el=document.getElementById(id);if(el)el.value=value||""};
      set("councilExecWeek",exec.week);set("councilExecStage",exec.stage);
-     set("councilExecOwner",exec.owner);set("councilExecSupport",exec.support);}if(report.councilMembers?.length||report.councilMemberIds?.length)document.querySelectorAll('#studentCouncilMembersGrid input').forEach(input=>{const student=students[Number(input.value)];input.checked=report.councilMemberIds?.includes(student?.id)||report.councilMembers?.includes(Number(input.value))});detectSourceProvider();setReportApprovalState(false);document.querySelector("#reports .report-builder")?.classList.remove("preview-mode");generateReport(true);requestAnimationFrame(()=>document.getElementById("programReportBuilder")?.scrollIntoView({behavior:"smooth",block:"start"}));toast("تم فتح التقرير للتعديل؛ اعتمده مجددًا بعد حفظ التغييرات")
+     set("councilExecOwner",exec.owner);set("councilExecSupport",exec.support);set("councilAgenda",exec.agenda);set("councilRecommendations",exec.recommendations);}if(report.councilMembers?.length||report.councilMemberIds?.length)document.querySelectorAll('#studentCouncilMembersGrid input').forEach(input=>{const student=students[Number(input.value)];input.checked=report.councilMemberIds?.includes(student?.id)||report.councilMembers?.includes(Number(input.value))});detectSourceProvider();setReportApprovalState(false);document.querySelector("#reports .report-builder")?.classList.remove("preview-mode");generateReport(true);requestAnimationFrame(()=>document.getElementById("programReportBuilder")?.scrollIntoView({behavior:"smooth",block:"start"}));toast("تم فتح التقرير للتعديل؛ اعتمده مجددًا بعد حفظ التغييرات")
   }
   function deleteSavedProgramReport(id,program){
     const saved=savedProgramReports(),report=saved.find(item=>String(item.id)===String(id));if(!report)return;if(!confirm(`سيُحذف تقرير «${report.title||report.program}» بالكامل مع صوره وروابطه. لا يمكن التراجع عن الحذف. هل تريد المتابعة؟`))return;const remaining=saved.filter(item=>String(item.id)!==String(id));localStorage.setItem("counselor_saved_program_reports",JSON.stringify(remaining));if(String(activeSavedProgramReportId)===String(id))activeSavedProgramReportId=null;renderProgramReportArchive();renderPrograms();renderPerformanceKpis();renderExternalEvaluation();renderMonthlyReports();renderNotificationCenter();if(remaining.some(item=>item.program===program))openProgramArchive(program);else closeModal("programArchiveModal");toast("تم حذف التقرير وكل محتواه")
@@ -4244,7 +4248,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     const p=r.profile||appProfile||emptyProfile,goals=r.goals||[],photos=(r.photos||[]).slice(0,4),positions=r.photoPositions||[],qr=r.sourceUrl?localQrSvgHTML(r.sourceUrl,"archive-qr-svg"):"",sourceInfo=reportSourceInfo(r.sourceUrl,r.sourceType,r.sourceTitle),sourceName=sourceInfo.name,specialCare=isSpecialCareProgram({name:r.program});
     const sourceAction=sourceInfo.isVideo?`<a class="archive-video-watch" href="${escapeHTML(r.sourceUrl)}" target="_blank" rel="noopener"><span>▶</span>شاهد التقرير المرئي</a>`:sourceInfo.isDrive?`<a class="archive-drive-open" href="${escapeHTML(r.sourceUrl)}" target="_blank" rel="noopener"><span>△</span>فتح ${escapeHTML(sourceInfo.kind)}</a>`:`<a href="${escapeHTML(r.sourceUrl)}" target="_blank" rel="noopener">فتح المصدر</a>`;
     const meta=[{label:"التاريخ",value:formatReportDate(r.date)},{label:"مكان التنفيذ",value:r.venue||"—"},{label:"الفئة المستهدفة",value:r.audience||"—"},{label:"رقم التقرير",value:`${index+1} من ${total}`}],council=r.councilMembers?.length?`<section class="archive-print-section"><h3>أعضاء المجلس الطلابي</h3><p>${r.councilMembers.map(studentIndex=>escapeHTML(students[studentIndex]?.name||"")).filter(Boolean).join("، ")}</p></section>`:"";
-    return `<article class="archive-print-page archive-print-report official-template-document">${officialDocumentHeaderHTML(r.title||r.program,meta,{profile:p,compact:true})}<div class="official-template-content">${councilExecFactsHTML(r)}<section class="archive-print-section"><h3>أهداف البرنامج</h3>${pdfSafeGoalsListHTML(goals,"الأهداف المعتمدة للبرنامج")}</section>${council}<section class="archive-print-section"><h3>التنفيذ</h3><p>${escapeHTML(r.description||"تم التنفيذ وفق الخطة المعتمدة.").replace(/\n/g,"<br>")}</p></section><section class="archive-print-section archive-photo-section"><h3>التوثيق</h3><div class="archive-print-photos">${[0,1,2,3].map(photoIndex=>{const pos=positions[photoIndex]||{x:50,y:50};return `<figure>${photos[photoIndex]?`<img src="${photos[photoIndex]}" alt="توثيق" style="--photo-x:${pos.x}%;--photo-y:${pos.y}%">`:""}</figure>`}).join("")}</div></section>${!specialCare&&r.sourceUrl?`<div class="archive-print-source"><div><b>${escapeHTML(sourceName)}</b><br>${sourceAction}${sourceInfo.isDrive?"<span class=\"drive-badge\">Google Drive</span>":""}</div><a href="${escapeHTML(r.sourceUrl)}" target="_blank" rel="noopener" title="فتح ${escapeHTML(sourceName)}">${qr}</a></div>`:""}<footer class="archive-print-footer"><span>${escapeHTML(p.counselor||"الموجّه الطلابي")}</span><span>${escapeHTML(r.program)}</span></footer></div></article>`;
+    return `<article class="archive-print-page archive-print-report official-template-document">${officialDocumentHeaderHTML(r.title||r.program,meta,{profile:p,compact:true})}<div class="official-template-content">${councilExecFactsHTML(r)}<section class="archive-print-section"><h3>أهداف البرنامج</h3>${pdfSafeGoalsListHTML(goals,"الأهداف المعتمدة للبرنامج")}</section>${council}<section class="archive-print-section"><h3>التنفيذ</h3><p>${escapeHTML(r.description||"تم التنفيذ وفق الخطة المعتمدة.").replace(/\n/g,"<br>")}</p></section>${councilReportSectionsHTML(r)}<section class="archive-print-section archive-photo-section"><h3>التوثيق</h3><div class="archive-print-photos">${[0,1,2,3].map(photoIndex=>{const pos=positions[photoIndex]||{x:50,y:50};return `<figure>${photos[photoIndex]?`<img src="${photos[photoIndex]}" alt="توثيق" style="--photo-x:${pos.x}%;--photo-y:${pos.y}%">`:""}</figure>`}).join("")}</div></section>${!specialCare&&r.sourceUrl?`<div class="archive-print-source"><div><b>${escapeHTML(sourceName)}</b><br>${sourceAction}${sourceInfo.isDrive?"<span class=\"drive-badge\">Google Drive</span>":""}</div><a href="${escapeHTML(r.sourceUrl)}" target="_blank" rel="noopener" title="فتح ${escapeHTML(sourceName)}">${qr}</a></div>`:""}<footer class="archive-print-footer"><span>${escapeHTML(p.counselor||"الموجّه الطلابي")}</span><span>${escapeHTML(r.program)}</span></footer></div></article>`;
   }
   function editProgramArchiveCover(program){
     const cover=archiveCoverSettings(program);document.getElementById("archiveCoverProgram").value=program;document.getElementById("archiveCoverTitleInput").value=cover.title||program;document.getElementById("archiveCoverSubtitleInput").value=cover.subtitle||"ملف تقارير البرنامج";document.getElementById("archiveCoverNoteInput").value=cover.note||"";openModal("programArchiveCoverModal")
@@ -6625,6 +6629,39 @@ ${bullets}
   /* Update 161: تخطيط مستند أعضاء المجلس الطلابي مطابقًا للنموذج الرسمي. */
   /* Update 164: جدول «معلومات تنفيذ البرنامج» يظهر في تقارير المجلس الطلابي فقط،
      بالحقول الأربعة المطلوبة في النموذج الرسمي (الأسبوع/المرحلة/المنفّذ/الجهات المساندة). */
+  /* Update 165: أعضاء المجلس المعتمدون يُقرأون من آخر سجل «أعضاء المجلس الطلابي»
+     ويُدرجون تلقائيًا في تقرير البرنامج (ثابتون، لا يُعاد إدخالهم في كل تقرير). */
+  function approvedCouncilRoster165(){
+    try{
+      const records=(typeof myRecords!=="undefined"&&Array.isArray(myRecords)?myRecords:[])
+        .filter(record=>record?.templateId==="student-council-members");
+      if(!records.length)return null;
+      const latest=records.slice().sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||""))).at(-1);
+      const names=(Array.isArray(latest.groupStudents)?latest.groupStudents:[]).filter(Boolean);
+      const roles=councilRolesValue(latest);
+      return {president:councilPresidentName(),
+        members:names.map((name,index)=>({name,grade:councilStudentGrade(name),role:councilNormalizedRole(name,index,roles)}))};
+    }catch(e){return null}
+  }
+  function councilRosterSectionHTML(){
+    const roster=approvedCouncilRoster165();
+    if(!roster||!roster.members.length)return "";
+    const rows=[`<tr><td>1</td><td>${escapeHTML(roster.president)}</td><td>—</td><td>الرئيس</td></tr>`]
+      .concat(roster.members.map((m,i)=>`<tr><td>${i+2}</td><td>${escapeHTML(m.name)}</td><td>${escapeHTML(m.grade||"")}</td><td>${escapeHTML(m.role)}</td></tr>`)).join("");
+    return `<section class="archive-print-section"><h3>أعضاء المجلس الطلابي</h3>
+      <table class="council-members-table"><thead><tr><th>م</th><th>الاسم</th><th>الصف</th><th>العضوية</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  }
+  function councilListSectionHTML(title,text){
+    const items=String(text||"").split(/\n+/).map(line=>line.replace(/^\s*[-•\d.\)]+\s*/,"").trim()).filter(Boolean);
+    if(!items.length)return "";
+    return `<section class="archive-print-section"><h3>${escapeHTML(title)}</h3><ol class="council-ordered-list">${items.map(item=>`<li>${escapeHTML(item)}</li>`).join("")}</ol></section>`;
+  }
+  function councilReportSectionsHTML(report){
+    if(!report?.councilExec)return "";
+    return councilListSectionHTML("بنود الاجتماع",report.councilExec.agenda)
+      +councilListSectionHTML("التوصيات",report.councilExec.recommendations)
+      +councilRosterSectionHTML();
+  }
   function councilExecFactsHTML(report){
     const exec=report?.councilExec;
     if(!exec)return "";
