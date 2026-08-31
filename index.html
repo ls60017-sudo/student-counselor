@@ -1306,7 +1306,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 165 · 31 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 166 · 31 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2642,7 +2642,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=165,APP_UPDATE_DATE="31 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=166,APP_UPDATE_DATE="31 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -2978,6 +2978,10 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     document.querySelectorAll("[data-section]").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
     document.getElementById("pageTitle").textContent=pageMeta[id][0];
     document.getElementById("pageSubtitle").textContent=pageMeta[id][1];
+    // Update 166: لوحات برنامج المجلس الطلابي (معلومات التنفيذ، البنود، التوصيات، الأعضاء)
+    // كانت تظهر فقط عند *تغيير* البرنامج من القائمة. فإذا فُتح القسم والبرنامج محدد مسبقًا
+    // لا يقع حدث change فتبقى مخفية ويظن المستخدم أن الحقول غير موجودة. نحدّثها عند فتح القسم.
+    if(id==="reports"){try{renderStudentCouncilMembers()}catch(e){}}
     const mobileTitle=document.getElementById("mobileCurrentSection");if(mobileTitle)mobileTitle.textContent=pageMeta[id][0];
     closeMobileMenu();
     document.getElementById("dashboardIdentity")?.classList.toggle("hidden",id!=="dashboard");
