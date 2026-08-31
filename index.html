@@ -774,11 +774,17 @@ body.print-external-evaluation #externalEvaluationPrintRoot *{visibility:visible
     html[data-theme="dark"] .council-role-row.council-role-head{background:#1b2330;color:#c7cede}
     .council-role-index{font-weight:900;color:#7030a0}
     .council-role-grade{color:var(--muted)}
+    .council-role-row.council-role-president{background:#f5efff;border-color:#d9c9f2}
+    html[data-theme="dark"] .council-role-row.council-role-president{background:#241b33;border-color:#4a3a6b}
+    .council-role-fixed{font-weight:900;color:#7030a0;text-align:center}
+    .council-members-table tr.council-president-row td{background:#f5efff;font-weight:800}
     .council-doc-panel{grid-column:1/-1;display:grid;gap:3mm}
     .council-approval-table,.council-members-table{width:100%;border-collapse:collapse;font-size:9px}
     .council-approval-table th,.council-approval-table td,.council-members-table th,.council-members-table td{border:1px solid #c9d3de;padding:2mm 2.5mm;text-align:center}
     .council-approval-table th,.council-members-table th{background:#f1ecf9;color:#4a2d78;font-weight:900}
     .council-members-table td:nth-child(2){text-align:right}
+    .council-members-table th:last-child,.council-members-table td:last-child{width:32mm}
+    .council-sign-cell{height:9mm}
     .council-members-table tbody tr:nth-child(even){background:#fafbfd}
     .council-empty-cell{color:#8a93a4}
     .council-members-panel{grid-column:1/-1;border:1px solid #b9ddd5;border-radius:14px;background:#f1faf7;padding:11px}.council-members-panel[hidden]{display:none}.council-members-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:190px;overflow:auto}.council-members-grid label{display:flex;align-items:center;gap:6px;border:1px solid #cce2dc;border-radius:9px;background:#fff;padding:7px;font-size:7.5px;font-weight:800}.program-archive-item.report-just-saved{outline:4px solid #22b58a;box-shadow:0 0 0 8px #22b58a24;animation:reportSavedPulse 1s ease 2}@keyframes reportSavedPulse{50%{transform:translateY(-4px)}}
@@ -1291,7 +1297,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     </nav>
     <div class="aside-footer">
       <span class="version-badge" id="appVersionBadge">الإصدار التجريبي v0.40.15-beta</span>
-      <span class="version-update" id="appUpdateNumber">التحديث رقم 161 · 31 أغسطس 2026</span>
+      <span class="version-update" id="appUpdateNumber">التحديث رقم 162 · 31 أغسطس 2026</span>
       نموذج تفاعلي أولي<br>
       بياناتك محفوظة في السحابة ومتزامنة بين أجهزتك.
     </div>
@@ -2627,7 +2633,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=161,APP_UPDATE_DATE="31 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=162,APP_UPDATE_DATE="31 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -6233,7 +6239,10 @@ ${bullets}
   /* Update 161: حقل خاص لتوزيع عضويات المجلس الطلابي. يقرأ الطلاب المختارين من منتقي
      «مجموعة طلاب»، ويعرض لكل طالب صفّه وقائمة عضوية (الرئيس/نائب الرئيس/المقرر/عضو).
      تُحفظ القيمة كنص JSON في حقل واحد حتى تعمل مع آلية الحفظ القائمة دون تغييرها. */
-  const COUNCIL_ROLE_OPTIONS=["الرئيس","نائب الرئيس","المقرر","عضو"];
+  // Update 162: رئاسة المجلس للموجّه الطلابي (تُدرج تلقائيًا من الملف الشخصي)،
+  // ويبدأ الطلاب من نائب الرئيس ثم المقرر ثم بقية الأعضاء.
+  const COUNCIL_ROLE_OPTIONS=["نائب الرئيس","المقرر","عضو"];
+  function councilPresidentName(){const p=(typeof appProfile!=="undefined"&&appProfile)||emptyProfile||{};return p.counselor||"الموجّه الطلابي"}
   function councilRolesValue(record){
     try{const raw=record?.fields?.councilRoles;return raw?JSON.parse(raw):{}}catch{return {}}
   }
@@ -6252,10 +6261,14 @@ ${bullets}
       host.parentElement.querySelector(".council-roles-list").innerHTML='<div class="empty">اختر أعضاء المجلس من «مجموعة طلاب» بالأعلى، ثم حدّد عضوية كل طالب.</div>';
       host.value="{}";return;
     }
-    const rows=names.map((name,index)=>{
+    const presidentRow=`<div class="council-role-row council-role-president"><span class="council-role-index">1</span>
+        <span class="council-role-name">${escapeHTML(councilPresidentName())}</span>
+        <span class="council-role-grade">—</span>
+        <span class="council-role-fixed">الرئيس</span></div>`;
+    const rows=presidentRow+names.map((name,index)=>{
       const role=saved[name]||councilDefaultRole(index);
       const grade=councilStudentGrade(name);
-      return `<div class="council-role-row"><span class="council-role-index">${index+1}</span>
+      return `<div class="council-role-row"><span class="council-role-index">${index+2}</span>
         <span class="council-role-name">${escapeHTML(name)}</span>
         <span class="council-role-grade">${escapeHTML(grade||"—")}</span>
         <select class="select" data-council-role="${escapeHTML(name)}" onchange="captureCouncilRoles()">
@@ -6278,7 +6291,7 @@ ${bullets}
       return `<div class="form-field full council-roles-field"><label>${escapeHTML(field.label)}</label>
         <div class="council-roles-list"></div>
         <input data-record-field="${escapeHTML(field.id)}" data-field-type="councilRoles" type="hidden" value="${escapeHTML(record?.fields?.councilRoles||"{}")}">
-        <small>العضويات الافتراضية بالترتيب: الرئيس، نائب الرئيس، المقرر، ثم أعضاء — ويمكنك تغييرها.</small></div>`;
+        <small>رئيس المجلس هو الموجّه الطلابي (يُدرج تلقائيًا)، ويبدأ الطلاب من نائب الرئيس ثم المقرر ثم أعضاء — ويمكنك تغيير عضوية أي طالب.</small></div>`;
     }
     if(field.type==="section")return `<div class="my-record-form-section" data-record-field="${escapeHTML(field.id)}" data-field-type="section"><b>${escapeHTML(field.label)}</b><small>${escapeHTML(field.description||"")}</small></div>`;const value=recordInputValue(record,field),studentSource=field.studentSource?` data-student-source="${escapeHTML(field.studentSource)}"`:"",readOnly=field.readOnly&&field.studentSource?" readonly aria-readonly=\"true\"":"",attrs=`data-record-field="${escapeHTML(field.id)}" data-field-type="${escapeHTML(field.type)}"${studentSource}`;if(field.type==="file"){const name=myRecordAttachmentName(value);return `<div class="form-field full"><label>${escapeHTML(field.label)}</label><input ${attrs} class="input" type="file" accept="${escapeHTML(field.accept||".pdf,.png,.jpg,.jpeg")}" onchange='captureMyRecordAttachment(this,${JSON.stringify(field.id)})'><small class="my-record-file-note">${escapeHTML(name?`المرفق المحفوظ: ${name}`:(field.hint||"أرفق الملف المطلوب"))}</small></div>`}if(field.type==="textarea")return `<div class="form-field full"><div class="my-record-field-head"><label>${escapeHTML(field.label)}</label>${myRecordFieldAssistHTML(field)}</div><textarea ${attrs} class="textarea" rows="4" placeholder="${escapeHTML(field.placeholder||"اكتب باختصار ثم استخدم مساعد الصياغة")}"${readOnly}>${escapeHTML(value)}</textarea></div>`;if(field.type==="select")return `<div class="form-field"><label>${escapeHTML(field.label)}</label><select ${attrs} class="select">${(field.options||[]).map(option=>`<option ${value===option?"selected":""}>${escapeHTML(option)}</option>`).join("")}</select></div>`;if(field.type==="checklist"){const selected=Array.isArray(value)?value:[];return `<div class="form-field full"><label>${escapeHTML(field.label)}</label><div class="my-record-action-options" ${attrs}>${(field.options||[]).map(option=>`<label class="my-record-choice"><input type="checkbox" value="${escapeHTML(option)}" ${selected.includes(option)?"checked":""}>${escapeHTML(option)}</label>`).join("")}</div></div>`}if(field.type==="multidate"){const dates=myRecordMultiDateValues(value);return `<div class="form-field full my-record-multidate"><label>${escapeHTML(field.label)}</label><div class="my-record-date-picker"><input id="myRecordDatePicker-${escapeHTML(field.id)}" class="input" type="date"><button type="button" class="btn" onclick='addMyRecordDate(${JSON.stringify(field.id)})'>+ إضافة التاريخ</button></div><input ${attrs} type="hidden" value="${escapeHTML(dates.join("|"))}"><div id="myRecordDateChips-${escapeHTML(field.id)}" class="my-record-date-chips">${myRecordDateChipsHTML(field.id,dates)}</div><small class="my-record-date-hint">${escapeHTML(field.hint||"اختيار التواريخ غير إلزامي.")}</small></div>`}const input=`<input ${attrs} class="input" type="${field.type==="number"?"number":field.type==="url"?"url":field.type==="date"?"date":"text"}" value="${escapeHTML(value)}" placeholder="${escapeHTML(field.placeholder||"")}"${field.type==="number"?` min="${escapeHTML(field.min??"0")}" max="${escapeHTML(field.max??"")}" step="${escapeHTML(field.step??"1")}"`:""}${readOnly}>`;return `<div class="form-field"><div class="my-record-field-head"><label>${escapeHTML(field.label)}</label>${myRecordFieldAssistHTML(field)}</div>${input}</div>`}
   function myRecordUniqueGrades(){return activeGradeOptions()}
@@ -6582,21 +6595,23 @@ ${bullets}
   function councilMembersPanelHTML(record){
     const names=(Array.isArray(record?.groupStudents)?record.groupStudents:[]).filter(Boolean);
     const roles=councilRolesValue(record);
-    const rows=names.length?names.map((name,index)=>{
+    // رئيس المجلس هو الموجّه الطلابي دائمًا، ثم يليه الطلاب بعضوياتهم
+    const presidentRow=`<tr class="council-president-row"><td>1</td><td>${escapeHTML(councilPresidentName())}</td><td>—</td><td>الرئيس</td><td class="council-sign-cell"></td></tr>`;
+    const rows=presidentRow+(names.length?names.map((name,index)=>{
       const role=roles[name]||councilDefaultRole(index);
-      return `<tr><td>${index+1}</td><td>${escapeHTML(name)}</td><td>${escapeHTML(councilStudentGrade(name)||"")}</td><td>${escapeHTML(role)}</td></tr>`;
-    }).join(""):`<tr><td colspan="4" class="council-empty-cell">لم يتم اختيار أعضاء بعد</td></tr>`;
+      return `<tr><td>${index+2}</td><td>${escapeHTML(name)}</td><td>${escapeHTML(councilStudentGrade(name)||"")}</td><td>${escapeHTML(role)}</td><td class="council-sign-cell"></td></tr>`;
+    }).join(""):`<tr><td colspan="5" class="council-empty-cell">لم يتم اختيار الأعضاء الطلاب بعد</td></tr>`);
     const f=record?.fields||{};
     return `<section class="council-doc-panel">
       <table class="council-approval-table"><thead><tr>
         <th>تاريخ الاعتماد</th><th>عدد الأعضاء</th><th>الفصل الدراسي</th><th>العام الدراسي</th></tr></thead>
         <tbody><tr>
           <td>${escapeHTML(formatReportDate(f.approvalDate)||"—")}</td>
-          <td>${names.length||"—"}</td>
+          <td>${names.length+1}</td>
           <td>${escapeHTML(f.councilTerm||"—")}</td>
           <td>${escapeHTML(f.councilYear||"—")}</td></tr></tbody></table>
       <table class="council-members-table"><thead><tr>
-        <th>م</th><th>أعضاء المجلس الطلابي</th><th>الصف</th><th>العضوية</th></tr></thead>
+        <th>م</th><th>أعضاء المجلس الطلابي</th><th>الصف</th><th>العضوية</th><th>التوقيع</th></tr></thead>
         <tbody>${rows}</tbody></table>
     </section>`;
   }
