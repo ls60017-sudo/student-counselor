@@ -2407,6 +2407,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     <div class="execution-program-toolbar"><div id="executionProgramBadge" class="program-label"></div><button class="execution-program-edit-button" type="button" onclick="openTaskProgramEditor()"><span>✎</span> تعديل عناصر الاستمارة</button></div>
     <div id="executionLinkedStatus" class="task-linked-status"><span>الربط: <b>مسودة مرتبطة بالخطة</b></span><span>عند الاعتماد تُحفظ نسخة تلقائيًا في ملف البرنامج</span></div>
     <div id="executionRelatedReports" class="task-related-reports"></div>
+    <div id="taskCouncilPanel" class="council-exec-panel" hidden><div class="student-extra-title"><b>محضر اجتماع المجلس الطلابي</b><small>البنود والتوصيات تُطبع داخل التقرير، وأعضاء المجلس المعتمدون يُدرجون تلقائيًا من سجل «أعضاء المجلس الطلابي».</small></div><div class="form-grid"><div class="form-field full"><label>بنود الاجتماع</label><textarea id="taskCouncilAgenda" class="textarea" rows="4" oninput="markTaskExecutionDirty()" placeholder="اكتب كل بند في سطر مستقل"></textarea></div><div class="form-field full"><label>التوصيات</label><textarea id="taskCouncilRecommendations" class="textarea" rows="4" oninput="markTaskExecutionDirty()" placeholder="اكتب كل توصية في سطر مستقل"></textarea></div></div></div>
     <div id="executionTaskContent" class="execution-summary"></div>
 
     <div id="executionProgramKit" class="execution-program-kit">
@@ -2642,7 +2643,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
 <div id="studentDossierPrintRoot" aria-hidden="true"></div>
 
 <script>
-  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=167,APP_UPDATE_DATE="31 أغسطس 2026";
+  const APP_VERSION="0.40.15-beta",APP_UPDATE_NUMBER=168,APP_UPDATE_DATE="31 أغسطس 2026";
   function toLatinDigits(value){
     const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";
     return String(value??"").replace(/[٠-٩۰-۹]/g,digit=>{const arabicIndex=arabic.indexOf(digit);return String(arabicIndex>=0?arabicIndex:persian.indexOf(digit))})
@@ -4806,6 +4807,19 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     renderExecutionReadyMaterials(info,selected);
   }
 
+  // Update 168: لوحة محضر المجلس داخل المهمة — تظهر فقط لبرامج المجلس الطلابي
+  function taskCouncilProgramName168(task,execution){
+    try{return String(execution?.program||task?.program||taskProgramInfo(task)?.name||"")}catch(e){return String(execution?.program||task?.program||"")}
+  }
+  function syncTaskCouncilPanel168(task,execution){
+    const panel=document.getElementById("taskCouncilPanel");if(!panel)return false;
+    let council=false;try{council=isStudentCouncilProgram({name:taskCouncilProgramName168(task,execution)})}catch(e){council=false}
+    panel.hidden=!council;
+    const agenda=document.getElementById("taskCouncilAgenda"),recommendations=document.getElementById("taskCouncilRecommendations");
+    if(agenda)agenda.value=council?(execution?.councilAgenda||""):"";
+    if(recommendations)recommendations.value=council?(execution?.councilRecommendations||""):"";
+    return council;
+  }
   function openTaskExecution(i){
     currentExecutionTaskIndex=i;
     additionalReportDraftActive=false;additionalReportBackup=null;
@@ -4827,6 +4841,7 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     }
     executionPhotoData=[...restoredPhotos];renderExecutionPhotoPicker();
     document.getElementById("executionCompletedNotice")?.classList.toggle("show",Boolean(t.done));
+    syncTaskCouncilPanel168(t,execution);
     taskExecutionDirty=false;updateTaskLinkedState();
     openModal("taskExecutionModal");
   }
@@ -4867,7 +4882,10 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     targets:weekly?["أولياء الأمور"]:[...document.querySelectorAll('input[name="target"]:checked')].map(x=>x.value),
     distribution:weekly?["مجموعات المدرسة"]:[...document.querySelectorAll('input[name="distribution"]:checked')].map(x=>x.value),
     materials:weekly?[]:[...document.querySelectorAll('input[name="readyMaterial"]:checked')].map(x=>x.value),
-    beneficiaries:weekly?"":document.getElementById("executionBeneficiaries").value||"0",notes:weekly?document.getElementById("weeklyMessageDescription").value.trim():document.getElementById("executionNotes").value.trim(),date:document.getElementById("executionDate").value||todayLocalISO(),videoUrl:normalizeExternalUrl(document.getElementById("executionVideoUrl").value),photos:[...executionPhotoData],photoPositions:(task?.execution?.photoPositions||executionPhotoData.map(()=>({x:50,y:50}))).map(pos=>({...pos})),customGoals:weekly?[]:editableSuggestionLines121("executionGoalsEditable",taskProgramInfo(task).goals),customFormats:weekly?[]:editableSuggestionLines121("executionFormatsEditable",taskProgramInfo(task).formats),customInstructions:weekly?[]:editableSuggestionLines121("executionInstructionsEditable",taskProgramInfo(task).instructions),customEvidence:weekly?[]:editableSuggestionLines121("executionEvidenceEditable",taskProgramInfo(task).evidence),weeklyMessage:weekly,weeklyTitle:weekly?document.getElementById("weeklyMessageTitle").value.trim():"",weeklyDescription:weekly?document.getElementById("weeklyMessageDescription").value.trim():"",weeklyGoals:weekly?document.getElementById("weeklyMessageGoals").value.trim():""
+    beneficiaries:weekly?"":document.getElementById("executionBeneficiaries").value||"0",notes:weekly?document.getElementById("weeklyMessageDescription").value.trim():document.getElementById("executionNotes").value.trim(),date:document.getElementById("executionDate").value||todayLocalISO(),videoUrl:normalizeExternalUrl(document.getElementById("executionVideoUrl").value),photos:[...executionPhotoData],photoPositions:(task?.execution?.photoPositions||executionPhotoData.map(()=>({x:50,y:50}))).map(pos=>({...pos})),customGoals:weekly?[]:editableSuggestionLines121("executionGoalsEditable",taskProgramInfo(task).goals),customFormats:weekly?[]:editableSuggestionLines121("executionFormatsEditable",taskProgramInfo(task).formats),customInstructions:weekly?[]:editableSuggestionLines121("executionInstructionsEditable",taskProgramInfo(task).instructions),customEvidence:weekly?[]:editableSuggestionLines121("executionEvidenceEditable",taskProgramInfo(task).evidence),weeklyMessage:weekly,weeklyTitle:weekly?document.getElementById("weeklyMessageTitle").value.trim():"",weeklyDescription:weekly?document.getElementById("weeklyMessageDescription").value.trim():"",weeklyGoals:weekly?document.getElementById("weeklyMessageGoals").value.trim():"",
+    // Update 168: بنود الاجتماع والتوصيات تُكتب داخل المهمة نفسها لبرامج المجلس الطلابي
+    councilAgenda:weekly?"":(document.getElementById("taskCouncilAgenda")?.value.trim()||""),
+    councilRecommendations:weekly?"":(document.getElementById("taskCouncilRecommendations")?.value.trim()||"")
   }}
   function writeExecutionSummary(){
     if(currentExecutionTaskIndex<0)return;const t=tasks[currentExecutionTaskIndex];if(isWeeklyParentMessageTask(t)){generateWeeklyMessageContent(true);toast("تمت صياغة الوصف والأهداف من عنوان الرسالة");return}const info=taskProgramInfo(t),data=captureExecutionForm(),rough=document.getElementById("executionNotes").value.trim(),roughPoints=rough.replace(/^[-•]\s*/gm,"").split(/\n|[،؛]/).map(point=>point.trim()).filter(Boolean).slice(0,3),target=data.targets.join("، ")||"الفئة المستهدفة",channels=data.distribution.join("، ")||"تنفيذ مباشر",materials=data.materials.join("، ")||"لا توجد مواد محددة";
@@ -4898,7 +4916,15 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     if(program&&!(program.goals||"").trim()){program.goals=info.goals.join("\n");program.steps=info.formats.join("\n");saveExtendedData()}
     syncReportPrograms();document.getElementById("reportProgram").value=String(programIndex);loadReportProgramGoals();setEditableReportGoals121(data.weeklyMessage?normalizeEditableReportGoals121(data.weeklyGoals):data.customGoals?.length?data.customGoals:info.goals,program?.name||info.name);document.getElementById("reportCustomTitle").value=data.weeklyTitle||t.title;document.getElementById("reportDate").value=data.date||todayLocalISO();
     const venueMap={"الفصل":"الفصل الدراسي","عن بعد":"عن بُعد","أخرى":"مكان آخر"};document.getElementById("reportVenue").value=venueMap[data.venue]||data.venue||"مكان آخر";setReportAudienceFromText(data.targets.join("، ")||program?.audience||"طلاب");document.getElementById("reportBeneficiaries").value=data.beneficiaries;document.getElementById("reportDescription").value=data.notes||`تم تنفيذ ${info.name} وفق الخطة الفصلية، باستخدام المحتوى الجاهز المناسب للفئة المستهدفة.`;
-    const reportSourceUrl=document.getElementById("reportSourceUrl"),reportSourceTitle=document.getElementById("reportSourceTitle"),reportSourceType=document.getElementById("reportSourceType");reportSourceUrl.value=data.videoUrl||"";reportSourceTitle.value="";reportSourceTitle.dataset.autoSourceName="true";reportSourceType.value=isGoogleDriveSource(data.videoUrl)?"فيديو Google Drive":"رابط فيديو";document.getElementById("reportSourceNote").value=data.videoUrl?"امسح رمز QR أو اضغط أيقونة التشغيل لمشاهدة الفيديو.":"";detectSourceProvider(true);reportPhotoData=[...data.photos].slice(0,4);reportPhotoPositions=(data.photoPositions||reportPhotoData.map(()=>({x:50,y:50}))).slice(0,4);renderReportPhotoPicker();setReportApprovalState(false);generateReport(true);return{t,info,data,programIndex,program};
+    const reportSourceUrl=document.getElementById("reportSourceUrl"),reportSourceTitle=document.getElementById("reportSourceTitle"),reportSourceType=document.getElementById("reportSourceType");reportSourceUrl.value=data.videoUrl||"";reportSourceTitle.value="";reportSourceTitle.dataset.autoSourceName="true";reportSourceType.value=isGoogleDriveSource(data.videoUrl)?"فيديو Google Drive":"رابط فيديو";document.getElementById("reportSourceNote").value=data.videoUrl?"امسح رمز QR أو اضغط أيقونة التشغيل لمشاهدة الفيديو.":"";detectSourceProvider(true);reportPhotoData=[...data.photos].slice(0,4);reportPhotoPositions=(data.photoPositions||reportPhotoData.map(()=>({x:50,y:50}))).slice(0,4);renderReportPhotoPicker();
+    // Update 168: تمرير بنود/توصيات المهمة إلى نموذج التقرير كي تُحفظ ضمن councilExec
+    try{if(isStudentCouncilProgram(program||{name:info.name})){
+      try{renderStudentCouncilMembers()}catch(e){}
+      const agendaField=document.getElementById("councilAgenda"),recField=document.getElementById("councilRecommendations");
+      if(agendaField&&(data.councilAgenda||!agendaField.value.trim()))agendaField.value=data.councilAgenda||"";
+      if(recField&&(data.councilRecommendations||!recField.value.trim()))recField.value=data.councilRecommendations||"";
+    }}catch(e){}
+    setReportApprovalState(false);generateReport(true);return{t,info,data,programIndex,program};
   }
   function linkedTaskReportData(context){
     const data=currentProgramReportData(),old=context.t.execution||{},weekly=context.data.weeklyMessage,weeklyGoals=String(context.data.weeklyGoals||"").split(/\n+/).map(item=>item.replace(/^\s*[-•]\s*/,"").trim()).filter(Boolean);return{...data,id:old.reportId||Date.now(),title:weekly?context.data.weeklyTitle:data.title,venue:weekly?"مجموعات المدرسة":data.venue,audience:weekly?"أولياء الأمور":data.audience,beneficiaries:weekly?"":data.beneficiaries,description:weekly?context.data.weeklyDescription:data.description,goals:weekly?weeklyGoals:data.goals,linkedTaskKey:old.linkedTaskKey||context.t.planKey||`task-${currentExecutionTaskIndex}`,linkedTaskTitle:context.t.title,linkedPlanWeek:context.t.planWeek||"",approved:true};
@@ -5040,7 +5066,9 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
       targets:[...document.querySelectorAll('input[name="target"]:checked')].map(x=>x.value),
       distribution:[...document.querySelectorAll('input[name="distribution"]:checked')].map(x=>x.value),
       materials:[...document.querySelectorAll('input[name="readyMaterial"]:checked')].map(x=>x.value),
-      photos:[...executionPhotoData]
+      photos:[...executionPhotoData],
+      councilAgenda:document.getElementById("taskCouncilAgenda")?.value||"",
+      councilRecommendations:document.getElementById("taskCouncilRecommendations")?.value||""
     };
     document.getElementById("executionDate").value=todayLocalISO();
     document.getElementById("executionBeneficiaries").value="";
@@ -5050,6 +5078,8 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     document.querySelectorAll('input[name="target"]').forEach(input=>input.checked=false);
     document.querySelectorAll('input[name="distribution"]').forEach(input=>input.checked=false);
     document.querySelectorAll('input[name="readyMaterial"]').forEach(input=>input.checked=false);
+    const newAgenda=document.getElementById("taskCouncilAgenda"),newRec=document.getElementById("taskCouncilRecommendations");
+    if(newAgenda)newAgenda.value="";if(newRec)newRec.value="";
     executionPhotoData=[];renderExecutionPhotoPicker();
     additionalReportDraftActive=true;
     renderTaskRelatedReports122();
@@ -5066,6 +5096,8 @@ body.print-student-dossier #studentDossierPrintRoot *{visibility:visible!importa
     document.querySelectorAll('input[name="target"]').forEach(input=>input.checked=(backup.targets||[]).includes(input.value));
     document.querySelectorAll('input[name="distribution"]').forEach(input=>input.checked=(backup.distribution||[]).includes(input.value));
     document.querySelectorAll('input[name="readyMaterial"]').forEach(input=>input.checked=(backup.materials||[]).includes(input.value));
+    const backAgenda=document.getElementById("taskCouncilAgenda"),backRec=document.getElementById("taskCouncilRecommendations");
+    if(backAgenda)backAgenda.value=backup.councilAgenda||"";if(backRec)backRec.value=backup.councilRecommendations||"";
     executionPhotoData=[...(backup.photos||[])];renderExecutionPhotoPicker();
     additionalReportDraftActive=false;additionalReportBackup=null;
   }
@@ -6669,9 +6701,15 @@ ${bullets}
     return `<section class="archive-print-section"><h3>${escapeHTML(title)}</h3><ol class="council-ordered-list">${items.map(item=>`<li>${escapeHTML(item)}</li>`).join("")}</ol></section>`;
   }
   function councilReportSectionsHTML(report){
-    if(!report?.councilExec)return "";
-    return councilListSectionHTML("بنود الاجتماع",report.councilExec.agenda)
-      +councilListSectionHTML("التوصيات",report.councilExec.recommendations)
+    // Update 168: كانت الأقسام مشروطة بوجود councilExec، وهو لا يُنشأ إلا من نموذج التقارير.
+    // فالتقرير المُنشأ من المهمة (وهو الأكثر استخدامًا) كان يفقد البنود والتوصيات وقائمة الأعضاء.
+    // الآن نعتمد على اسم البرنامج: أي تقرير لبرنامج المجلس الطلابي يعرض أعضاءه المعتمدين،
+    // والبنود والتوصيات تظهر متى ما كُتبت من المهمة أو من نموذج التقارير.
+    const isCouncil=report&&(report.councilExec||isStudentCouncilProgram({name:report.program}));
+    if(!isCouncil)return "";
+    const exec=report.councilExec||{};
+    return councilListSectionHTML("بنود الاجتماع",exec.agenda)
+      +councilListSectionHTML("التوصيات",exec.recommendations)
       +councilRosterSectionHTML();
   }
   function councilExecFactsHTML(report){
